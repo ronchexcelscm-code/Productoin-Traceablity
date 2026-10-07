@@ -205,7 +205,9 @@
       <p class="muted" style="font-size:14px;margin:6px 0 0">Traceability terminal</p>
     </div>
     <label style="color:var(--dim);font-size:13px;display:block;margin-bottom:6px">Department</label>
-    <select id="loginUser" class="small" style="width:100%;font-size:16px;padding:11px 12px"></select>
+    <select id="loginUser" class="small" style="width:100%;font-size:16px;padding:11px 12px"
+            onchange="showLoginEmail()"></select>
+    <div id="loginEmail" class="mono" style="color:var(--faint);font-size:12px;margin-top:6px"></div>
     <label style="color:var(--dim);font-size:13px;display:block;margin:16px 0 6px">Password</label>
     <input id="loginPass" type="password" style="font-size:18px;padding:13px 14px" autocomplete="current-password">
     <button class="bigbtn" style="justify-content:center;margin-top:18px;color:var(--ok);border-color:var(--ok)"
@@ -3675,6 +3677,12 @@ function startTerminal(){
 /* ---------- boot ---------- */
 var PC_STATION = loadPC();
 
+function showLoginEmail(){
+  var dom = (window.APP_SETTINGS && window.APP_SETTINGS.loginDomain) || "ronch-floor.app";
+  var e = el("loginEmail");
+  if(e && el("loginUser").value) e.textContent = "signing in as  " + el("loginUser").value + "@" + dom;
+}
+
 function doSignIn(){
   var dom = (window.APP_SETTINGS && window.APP_SETTINGS.loginDomain) || "ronch-floor.app";
   var email = el("loginUser").value + "@" + dom, pass = el("loginPass").value;
@@ -3684,10 +3692,20 @@ function doSignIn(){
     .then(function(){ el("loginPass").value = ""; el("loginErr").textContent = ""; })
     .catch(function(e){
       var m = String(e.code || e.message || e);
-      el("loginErr").textContent =
-        /wrong-password|invalid-credential|invalid-login/.test(m) ? "Wrong password for this department."
-      : /user-not-found/.test(m) ? "That department has no login yet. Create it in Firebase."
+      // Firebase hides whether the account exists (email enumeration protection,
+      // on by default since Sept 2023), so one error covers both causes. Saying
+      // only "wrong password" sends people hunting for the wrong problem.
+      el("loginErr").innerHTML =
+        /wrong-password|invalid-credential|invalid-login/.test(m)
+          ? 'Sign-in refused for <span class="mono">' + email + '</span>.<br>'
+            + '<span style="color:var(--dim);font-size:13px">Either the password is wrong, '
+            + 'or that exact address has no account in Firebase. Check both — Firebase '
+            + 'reports them the same way.</span>'
+      : /user-not-found/.test(m) ? "No account for " + email + ". Create it in Firebase."
+      : /too-many-requests/.test(m) ? "Too many attempts from this computer. Wait a few minutes."
       : /network/.test(m) ? "No connection to Firebase."
+      : /operation-not-allowed/.test(m) ? "Email/password sign-in is switched off in Firebase."
+      : /unauthorized-domain/.test(m) ? "This address is not in Firebase's authorised domains."
       : m;
     });
 }
@@ -3757,6 +3775,7 @@ function startLocalMode(reason){
     el("loginUser").innerHTML = logins.map(function(x){
       return '<option value="' + x + '">' + x.charAt(0).toUpperCase() + x.slice(1) + '</option>';
     }).join("");
+    showLoginEmail();
     mods.auth.onAuthStateChanged(mods.authInst, function(u){
       if(u){
         CLOUD.user = (u.email || "").split("@")[0];

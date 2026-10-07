@@ -250,6 +250,8 @@
         <span class="act-t">Export all data</span><span class="act-s">Single CSV, every section</span></button>
       <button class="act" onclick="toggleRange()">
         <span class="act-t">Load past records</span><span class="act-s">For reporting a date range</span></button>
+      <button class="act" onclick="togglePassword()" id="pwBtn">
+        <span class="act-t">Change password</span><span class="act-s">For this department login</span></button>
       <button class="act" onclick="signOutCloud()" id="signOutBtn">
         <span class="act-t">Sign out</span><span class="act-s">This computer</span></button>
     </div>
@@ -335,6 +337,25 @@
         <div style="color:var(--dim);font-size:13px;margin-bottom:8px">Issue register</div>
         <div id="qrRegister" style="overflow-x:auto"></div>
       </div>
+    </div>
+
+    <div id="pwPanel" class="hide" style="margin-top:16px;padding:18px;background:var(--panel);
+         border:1px solid var(--line);border-radius:10px;max-width:520px">
+      <h3 style="margin:0 0 4px">Change this department's password</h3>
+      <p class="muted" style="font-size:13px;margin:0 0 16px">
+        Changes the password for <span class="mono" id="pwWho"></span>, for everyone who uses it.
+        Tell the other stations before you change it.</p>
+      <label style="color:var(--dim);font-size:13px;display:block;margin-bottom:5px">Current password</label>
+      <input id="pwOld" type="password" style="font-size:16px;padding:11px 12px" autocomplete="current-password">
+      <label style="color:var(--dim);font-size:13px;display:block;margin:14px 0 5px">New password</label>
+      <input id="pwNew" type="password" style="font-size:16px;padding:11px 12px" autocomplete="new-password">
+      <label style="color:var(--dim);font-size:13px;display:block;margin:14px 0 5px">New password again</label>
+      <input id="pwNew2" type="password" style="font-size:16px;padding:11px 12px" autocomplete="new-password">
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="ghost" style="color:var(--ok);border-color:var(--ok)" onclick="doChangePassword()">Change password</button>
+        <button class="ghost" onclick="togglePassword()">Cancel</button>
+      </div>
+      <div id="pwOut" style="margin-top:14px;font-size:14px"></div>
     </div>
 
     <div id="rangePanel" class="hide" style="margin-top:16px;padding:18px;background:var(--panel);
@@ -2584,6 +2605,53 @@ function knownVariants(){
   allUnits().forEach(function(u){ var p = variantOf(u); if(p !== "UNKNOWN") v[p] = 1; });
   return Object.keys(v).sort();
 }
+function togglePassword(){
+  var g = el("pwPanel");
+  g.classList.toggle("hide");
+  if(g.classList.contains("hide")) return;
+  if(!CLOUD.on || !CLOUD.auth || !CLOUD.auth.currentUser){
+    el("pwOut").innerHTML = '<span class="muted">This computer is not signed in to the shared '
+      + 'database, so there is no password to change here.</span>';
+    return;
+  }
+  el("pwWho").textContent = CLOUD.auth.currentUser.email || "";
+  el("pwOld").value = el("pwNew").value = el("pwNew2").value = "";
+  el("pwOut").textContent = "";
+  setTimeout(function(){ el("pwOld").focus(); }, 60);
+}
+
+function doChangePassword(){
+  var out = el("pwOut");
+  var u = CLOUD.auth && CLOUD.auth.currentUser;
+  if(!u) return;
+  var oldP = el("pwOld").value, a = el("pwNew").value, b = el("pwNew2").value;
+  var bad = function(m){ out.innerHTML = '<span style="color:var(--bad)">' + m + '</span>'; };
+  if(!oldP) return bad("Enter the current password.");
+  if(a.length < 6) return bad("The new password must be at least 6 characters.");
+  if(a !== b) return bad("The two new passwords do not match.");
+  if(a === oldP) return bad("The new password is the same as the current one.");
+
+  out.innerHTML = '<span style="color:var(--wait)">Changing…</span>';
+  var A = CLOUD.authFns;
+  A.reauthenticateWithCredential(u, A.EmailAuthProvider.credential(u.email, oldP))
+    .then(function(){ return A.updatePassword(u, a); })
+    .then(function(){
+      el("pwOld").value = el("pwNew").value = el("pwNew2").value = "";
+      out.innerHTML = '<span style="color:var(--ok)">Password changed. '
+        + 'Every station using this login needs the new one — terminals already signed in '
+        + 'keep working until they sign out.</span>';
+      notify("ok","Password changed", u.email);
+    })
+    .catch(function(e){
+      var m = String(e.code || e.message || e);
+      bad(/wrong-password|invalid-credential|invalid-login/.test(m) ? "The current password is wrong."
+        : /weak-password/.test(m) ? "That password is too weak — use at least 6 characters."
+        : /requires-recent-login/.test(m) ? "Sign out and in again, then change it."
+        : /network/.test(m) ? "No connection to Firebase."
+        : m);
+    });
+}
+
 function toggleRange(){
   var g = el("rangePanel");
   g.classList.toggle("hide");
@@ -3864,7 +3932,8 @@ setInterval(function(){
    without it — if this fails, the page falls back to this computer's storage. */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  EmailAuthProvider, reauthenticateWithCredential, updatePassword
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
@@ -3884,7 +3953,8 @@ try{
     db, authInst,
     fs: { collection, doc, getDoc, getDocs, onSnapshot, query, where, orderBy,
           limit, writeBatch, runTransaction },
-    auth: { signInWithEmailAndPassword, signOut, onAuthStateChanged }
+    auth: { signInWithEmailAndPassword, signOut, onAuthStateChanged,
+            EmailAuthProvider, reauthenticateWithCredential, updatePassword }
   });
 }catch(e){
   window.__cloudFail("Firebase could not start: " + (e && e.message ? e.message : e));

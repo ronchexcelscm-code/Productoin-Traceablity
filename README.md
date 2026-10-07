@@ -153,6 +153,24 @@ is the one to send a customer.
 
 ---
 
+## Passwords
+
+**Changing one (normal way).** Sign in, then **Change password** on the
+dashboard. It asks for the current password and the new one twice. The change
+applies to every computer using that department login, so tell the other
+stations before you do it. Terminals already signed in keep working until they
+sign out.
+
+**Forgotten password.** The login addresses are not real mailboxes, so Firebase's
+"Reset password" email never arrives anywhere. Instead, in the Firebase console:
+**Authentication → Users** → find the user (e.g. `production@ronch-floor.app`)
+→ **⋮ → Delete account**, then **Add user** with the same email and a new
+password. No data is lost — nothing is keyed to the account, only to the
+department name in the address.
+
+**When someone leaves**, change that department's password. The same login is
+shared by every terminal, so that is the only way to lock them out.
+
 ## Updating the app later
 
 Upload the new `index.html` to the same repository. The data lives in Firebase

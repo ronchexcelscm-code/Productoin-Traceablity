@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Department = the part of the login email before "@",
+    // e.g. production@ronch-floor.app -> "production"
+    function dept() { return request.auth.token.email.split('@')[0]; }
+    function signedIn() { return request.auth != null && request.auth.token.email != null; }
+    function by(list) { return signedIn() && (dept() == 'admin' || dept() in list); }
+
+    // Everyone signed in can read everything
+    match /{document=**} { allow read: if signedIn(); }
+
+    // ---------- Production Floor CRM (unchanged) ----------
+    match /pf_orders/{id}     { allow write: if by(['sales']); }
+    match /pf_clients/{id}    { allow write: if by(['sales']); }
+    match /pf_pos/{id}        { allow write: if by(['scm', 'store']); }
+    match /pf_meta/{id}       { allow write: if by(['scm']); }
+    match /pf_grns/{id}       { allow write: if by(['store']); }
+    match /pf_issues/{id}     { allow write: if by(['store']); }
+    match /pf_cmoves/{id}     { allow write: if by(['store']); }
+    match /pf_wos/{id}        { allow write: if by(['production', 'sales']); }
+    match /pf_logs/{id}       { allow write: if by(['production']); }
+    match /pf_fg/{id}         { allow write: if by(['production']); }
+    match /pf_dispatches/{id} { allow write: if by(['dispatch']); }
+    match /pf_models/{id}     { allow write: if by(['rnd']); }
+    match /pf_components/{id} { allow write: if by(['rnd']); }
+    match /pf_boms/{id}       { allow write: if by(['rnd', 'quality']); }
+    match /pf_qc/{id}         { allow write: if by(['quality']); }
+    match /pf_reworks/{id}    { allow write: if by(['production']); }
+    match /pf_mods/{id}       { allow write: if by(['rnd']); }
+
+    // ---------- Traceability (this app) ----------
+    // Station terminals write unit records, the enclosure index and boxes.
+    match /tr_units/{id}   { allow write: if by(['production']); }
+    match /tr_enc/{id}     { allow write: if by(['production']); }
+    match /tr_boxes/{id}   { allow write: if by(['production']); }
+    match /tr_batches/{id} { allow write: if by(['production']); }
+
+    // Test limits and settings are set up once; quality may change limits.
+    match /tr_limits/{id}  { allow write: if by(['production', 'quality']); }
+    match /tr_meta/{id}    { allow write: if by(['production']); }
+  }
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ronch Traceability — production floor</title>
+<title>Ronch Excel Industries Pvt. Ltd. — Traceability</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <meta name="theme-color" content="#10151A">
@@ -99,7 +99,6 @@
   .dash-title h1{font-size:31px;font-weight:700;margin:0 0 6px;letter-spacing:.6px;
     text-transform:uppercase}
   .dash-title p{margin:0 0 12px;font-size:15px;color:var(--dim)}
-  .trial-pill{background:var(--waitd);color:var(--wait);border-color:transparent}
   .hdr-logo{height:26px;width:auto;background:#fff;border-radius:5px;padding:4px;flex:0 0 auto}
   .hdr-name{font-size:13px;font-weight:700;letter-spacing:.9px;color:var(--dim);
     text-transform:uppercase;flex:0 0 auto}
@@ -160,16 +159,18 @@
     body.print-sheet #printSheet{display:block!important;background:#fff}
     body:not(.print-sheet)>*:not(#printLabel){display:none!important}
     #printLabel{display:block!important;color:#000;background:#fff;width:100%;padding:0;font-family:Arial,sans-serif}
-    /* Master box label stock: 100mm x 75mm */
-    @page{size:100mm 75mm;margin:0}
-    #printLabel .label{width:100mm;height:75mm;padding:4mm;margin:0;
-      box-sizing:border-box;display:flex;flex-direction:column;text-align:left;overflow:hidden}
-    #printLabel .top{display:flex;gap:4mm;align-items:flex-start}
-    #printLabel .meta{flex:1;min-width:0}
-    #printLabel svg{width:30mm;height:30mm;display:block;flex:0 0 30mm}
-    #printLabel .boxid{font:bold 12px/1.15 monospace;color:#000;margin:0 0 1.5mm;word-break:break-all}
-    #printLabel .serials{font:6px/1.25 monospace;columns:3;column-gap:3mm;margin-top:2mm;flex:1;overflow:hidden}
-    #printLabel .lbl-logo{height:9mm;width:auto;display:block;margin:0 0 2mm}
+    /* Master box label stock: 100mm x 50mm. The label carries the box QR and
+       the codes of the drivers inside it, and nothing else. */
+    @page{size:100mm 50mm;margin:0}
+    #printLabel .label{width:100mm;height:50mm;padding:2mm;margin:0;
+      box-sizing:border-box;display:flex;align-items:center;gap:2.5mm;overflow:hidden}
+    #printLabel .boxqr{flex:0 0 auto}
+    #printLabel .boxqr svg{display:block}
+    #printLabel .codes{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;
+      flex-wrap:wrap;align-content:flex-start;font-family:"Courier New",monospace;color:#000}
+    #printLabel .codes div{white-space:nowrap}
+
+    /* Sheets of driver labels */
     #printSheet .lbl{box-sizing:border-box;overflow:hidden;page-break-inside:avoid;
       break-inside:avoid;display:flex;align-items:center;color:#000}
     #printSheet .lbl svg{display:block;flex:0 0 auto}
@@ -179,10 +180,15 @@
     #printSheet .t3{font:6pt/1.2 Arial,sans-serif;color:#333;margin-top:.6mm}
     #printSheet .t4{font:5.5pt/1.1 "Courier New",monospace;color:#555;margin-top:.6mm;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* QR above the code: the label is a column, the code centred beneath it */
+    #printSheet .lbl.stack{flex-direction:column;justify-content:flex-start;
+      align-items:center;text-align:center}
+    #printSheet .lbl.stack .tx{padding-left:0;width:100%;text-align:center}
+    #printSheet .lbl.stack .lblcode{font-family:"Courier New",monospace;font-weight:bold;
+      line-height:1.06;color:#000}
+    #printSheet .lbl.stack .lblcode div{white-space:nowrap;overflow:hidden}
     #printSheet .pg{page-break-after:always;break-after:page}
     #printSheet .pg:last-child{page-break-after:auto;break-after:auto}
-    #printLabel h1{font-size:11px;margin:0 0 1.5mm;color:#000;letter-spacing:.4px}
-    #printLabel p{color:#000;margin:.6mm 0;font-size:8px}
   }
 </style>
 </head>
@@ -201,7 +207,7 @@
   <div class="wrap" style="max-width:460px">
     <div style="text-align:center;margin-bottom:26px">
       <img src="icons/icon-192.png" alt="" style="width:58px;height:58px;background:#fff;border-radius:12px;padding:7px">
-      <h2 style="margin-top:16px">RONCH PRODUCTION FLOOR</h2>
+      <h2 style="margin-top:16px">RONCH EXCEL INDUSTRIES PVT. LTD.</h2>
       <p class="muted" style="font-size:14px;margin:6px 0 0">Traceability terminal</p>
     </div>
     <label style="color:var(--dim);font-size:13px;display:block;margin-bottom:6px">Department</label>
@@ -226,9 +232,8 @@
     <header class="dash-head">
       <div class="logo-chip"><img src="data:image/png;base64,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" alt="Ronch Excel"></div>
       <div class="dash-title">
-        <h1>RONCH PRODUCTION FLOOR</h1>
+        <h1>RONCH EXCEL INDUSTRIES PVT. LTD.</h1>
         <p>LED driver manufacturing &mdash; serial tracking from board to packed box</p>
-        <span class="pill trial-pill">Trial run</span>
       </div>
     </header>
 
@@ -295,6 +300,11 @@
               <option value="216x279">Letter (216 x 279)</option>
               <option value="roll">Label roll (one per page)</option>
               <option value="custom">Custom…</option>
+            </select></label>
+          <label style="color:var(--dim);font-size:13px">Layout<br>
+            <select id="qrLayout" class="small" style="width:170px" onchange="qrSizeChanged()">
+              <option value="stack">QR above the code</option>
+              <option value="side">QR beside the code</option>
             </select></label>
           <label style="color:var(--dim);font-size:13px">QR size (mm)<br>
             <input id="qrSize" class="small" type="number" min="6" max="80" step="1" value="18"
@@ -382,7 +392,7 @@
     <footer class="dash-foot">
       <span><span id="syncDot" class="an-dot" style="background:var(--faint)"></span><span id="syncText">starting</span></span>
       <span class="dot">&middot;</span>
-      <span>Ronch Excel Industries Pvt Ltd</span>
+      <span>Ronch Excel Industries Pvt. Ltd.</span>
       <span class="dot">&middot;</span>
       <span id="pickCount"></span>
     </footer>
@@ -418,12 +428,11 @@
 <!-- TERMINAL -->
 <div id="term" class="hide">
   <header>
-    <img class="hdr-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABfBAMAAADlmt9zAAAAJFBMVEX8/fw0lB0AUHyezJQcYolKoDVosFdTiaVDfJqwydaSs8XC37tcKDrZAAADYUlEQVR42s2XTUgVURTH/28+1DDEh2SUaENIBbZ4IbmohY9QoiA1ECVo8SAo3MUjaBGE+zbuooXkImghvCYLW+RCaCnSbMI+jAaiNvHwEeTX+2oxX+feuXc+AqG7eWdmzs9zzr3nnnMEBOsJAGSmChcF3zIjrnB2znv1fN7eBJDpBLSxeR7QGrYj1NwXjxcfQPG+1kpHeMT/lnd+7j2yDfq9VpqSAK5+SYHNvnrbnZMDxRIaoTCrP00ZUDQN0aZVb0uAZ6ZhQ0h0CYG2hxJ9oFEQAIcuQKYPvMyFgMqMXB3Adx4wNswo/cApzf2N/PMAsCw+OPmqFuIAU2xCCDQAYDIvNCECTk0DQPXF70nm9SvnPlwKhXtmOZCvr5IPJyyhhTtEH0vUL1vo0un79Km+RB5aRID+hn2u/yFh58KAMsNb3DdYnzjg5t1QTO/zjE8soM8Kdvl14JPJA1eESZGnp8+cg/5JmCT6YT/EMmvhmCTvfEllXVJWJXloEJQCuixxP/hSgQEuy4B9X6pQQJmT3g3fp3cUaJFfNyuImgDdcqAZCAQoJLjZNTMAlChgwhNmFXooCYLIaUzRbBmXueIlUCUAjm4Ai7FxrAYu5QDMxkat+oCRc6GY5QN2kl2lFoTlMcpC0qrM6Knx+k0f0P7Fwn8GNA/IQubgY9DyC6QZnEwAVOhEsp7AJa8YZZLGMGen3Catzy1jHw/q4NS055Aa2E67S14pT558OSNlLhnpDiID9yAkLVdgIeU2adhLonbeCbT2zdKAifh6p25uOsIWFCBonu3SMTfIH4X2811ZQe5kkm8vPP5y6xzp1wqACYMff7kIvJPSLKf+rjUBqGVAaf26LSLaPGHHsUCGklqXYFzyI7jmXqCdwCf6v4g3UfjjFRa8rNb6nNRQOwBscQF0gMxj7hWtUY0sCwT6KAd3mmm32VuBPJTl5y/norX2NnyXAOjlOgC0D/TQoW7YJDezaFIAwEgWWytsmv6iV7m1V2UBQTus0Lq0NxZXBLQKVyzadqMtDJtc5XsabUA3+VJ5Ixq4ClH9kruklNO1LL2csscdT9kUxy0JUO8X6y9I2+5af5x+qMoPfeFPuMdC1Ez1ozrNNLvRqsUX49AaGvBL4ehnK1y9BWtwsFlZGcnW163wt7+dk8UDykCJPwAAAABJRU5ErkJggg==" alt="Ronch Excel"><span class="hdr-name">RONCH PRODUCTION FLOOR</span>
+    <img class="hdr-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABfBAMAAADlmt9zAAAAJFBMVEX8/fw0lB0AUHyezJQcYolKoDVosFdTiaVDfJqwydaSs8XC37tcKDrZAAADYUlEQVR42s2XTUgVURTH/28+1DDEh2SUaENIBbZ4IbmohY9QoiA1ECVo8SAo3MUjaBGE+zbuooXkImghvCYLW+RCaCnSbMI+jAaiNvHwEeTX+2oxX+feuXc+AqG7eWdmzs9zzr3nnnMEBOsJAGSmChcF3zIjrnB2znv1fN7eBJDpBLSxeR7QGrYj1NwXjxcfQPG+1kpHeMT/lnd+7j2yDfq9VpqSAK5+SYHNvnrbnZMDxRIaoTCrP00ZUDQN0aZVb0uAZ6ZhQ0h0CYG2hxJ9oFEQAIcuQKYPvMyFgMqMXB3Adx4wNswo/cApzf2N/PMAsCw+OPmqFuIAU2xCCDQAYDIvNCECTk0DQPXF70nm9SvnPlwKhXtmOZCvr5IPJyyhhTtEH0vUL1vo0un79Km+RB5aRID+hn2u/yFh58KAMsNb3DdYnzjg5t1QTO/zjE8soM8Kdvl14JPJA1eESZGnp8+cg/5JmCT6YT/EMmvhmCTvfEllXVJWJXloEJQCuixxP/hSgQEuy4B9X6pQQJmT3g3fp3cUaJFfNyuImgDdcqAZCAQoJLjZNTMAlChgwhNmFXooCYLIaUzRbBmXueIlUCUAjm4Ai7FxrAYu5QDMxkat+oCRc6GY5QN2kl2lFoTlMcpC0qrM6Knx+k0f0P7Fwn8GNA/IQubgY9DyC6QZnEwAVOhEsp7AJa8YZZLGMGen3Catzy1jHw/q4NS055Aa2E67S14pT558OSNlLhnpDiID9yAkLVdgIeU2adhLonbeCbT2zdKAifh6p25uOsIWFCBonu3SMTfIH4X2811ZQe5kkm8vPP5y6xzp1wqACYMff7kIvJPSLKf+rjUBqGVAaf26LSLaPGHHsUCGklqXYFzyI7jmXqCdwCf6v4g3UfjjFRa8rNb6nNRQOwBscQF0gMxj7hWtUY0sCwT6KAd3mmm32VuBPJTl5y/norX2NnyXAOjlOgC0D/TQoW7YJDezaFIAwEgWWytsmv6iV7m1V2UBQTus0Lq0NxZXBLQKVyzadqMtDJtc5XsabUA3+VJ5Ixq4ClH9kruklNO1LL2csscdT9kUxy0JUO8X6y9I2+5af5x+qMoPfeFPuMdC1Ez1ozrNNLvRqsUX49AaGvBL4ehnK1y9BWtwsFlZGcnW163wt7+dk8UDykCJPwAAAABJRU5ErkJggg==" alt="Ronch Excel"><span class="hdr-name">RONCH EXCEL INDUSTRIES PVT. LTD.</span>
     <div style="display:flex;align-items:baseline;gap:12px">
       <span class="mono" style="color:var(--info);font-size:13px" id="hStationId"></span>
       <span style="font-size:20px;font-weight:500" id="hStationName"></span>
     </div>
-    <span class="pill" style="background:var(--waitd);color:var(--wait);border-color:transparent">Trial data</span>
     <div style="flex:1"></div>
     <span style="color:var(--dim);font-size:14px">Operator</span>
     <span class="mono" style="font-size:16px" id="hOperator"></span>
@@ -576,7 +585,7 @@
           <input id="minAge" class="small" type="number" min="0" onchange="setMinAge(this.value)">
         </label>
         <button class="ghost" onclick="backup()">Backup file</button>
-        <button class="ghost" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">Clear trial data</button>
+        <button class="ghost" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">Clear all records</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;
                   border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0">
@@ -1005,7 +1014,8 @@ var CODE_MASTER = [
   {pos:2, name:"Customer",       cls:"Attribute", map:{A:"Crompton", B:"Bajaj", C:"Surya", D:"Century",
                                                        E:"Eveready", F:"Wipro", G:"Havells", H:"Signify",
                                                        I:"Excelite"}},
-  {pos:3, name:"Control type",   cls:"Model",     map:{"1":"CC", "2":"CV"}},
+  {pos:3, name:"Control type",   cls:"Model",     map:{"1":"CC (Constant Current)",
+                                                       "2":"CV (Constant Voltage)"}},
   {pos:4, name:"Version",        cls:"Model",     map:{"1":"SQ", "2":"V2", "3":"V3", "4":"V4",
                                                        "7":"V7", "8":"V8", "9":"V9"}},
   {pos:5, name:"Input power",    cls:"Model",     map:{A:"9 W", B:"18 W", C:"24 W", D:"35/36 W", E:"50 W",
@@ -1207,7 +1217,10 @@ function accept(t,b){ beep("ok"); banner("ok",t,b); render(); focusScan(); }
 function waiting(t,b){ beep("wait"); banner("wait",t,b); render(); focusScan(); }
 function reject(t,b){
   beep("bad"); banner("bad",t,b); pending=null; hideFailCodes();
-  if(typeof A !== "undefined"){ A.captured = null; A.capturing = false; clearTimeout(A.captureTimer); }
+  if(typeof A !== "undefined"){
+    A.captured = null; A.capturing = false; clearTimeout(A.captureTimer);
+    A.machineStatus = null; A.lastVerdictAt = 0;
+  }
   render(); focusScan();
 }
 function idle(){
@@ -1325,7 +1338,7 @@ function scanHipot(c){
   }
   var owner = db.encIndex[c.serial];
   if(owner && (!halfPair || halfPair.serial !== owner)){
-    if(halfPair) return reject("Enclosure already used", c.serial + " is already paired to " + owner + ".");
+    if(halfPair) return failPair("Enclosure already used", c.serial + " is already paired to " + owner + ".");
     pending = {board:owner, enclosure:c.serial};
     waiting("Already paired — record the result", owner + " · " + c.serial);
     return maybeStartCapture();
@@ -1336,29 +1349,36 @@ function scanHipot(c){
   return waiting("Enclosure accepted — now scan the board", c.serial);
 }
 
+/* Any rejection below ends the pairing attempt, so the half-scan and its
+   timeout are cleared too — otherwise the next unit inherits them. */
+function failPair(title, body){
+  halfPair = null; clearTimeout(pairTimer);
+  return reject(title, body);
+}
+
 function completePair(board, enc){
   clearTimeout(pairTimer);
   var u = db.units[board];
-  if(!u) return reject("Unknown board", board + " was never recorded at PCBA testing.");
-  if(u.enclosure && u.enclosure !== enc) return reject("Board already paired", board + " is paired to " + u.enclosure + ".");
-  if(db.encIndex[enc] && db.encIndex[enc] !== board) return reject("Enclosure already used", enc + " is paired to " + db.encIndex[enc] + ".");
+  if(!u) return failPair("Unknown board", board + " was never recorded at PCBA testing.");
+  if(u.enclosure && u.enclosure !== enc) return failPair("Board already paired", board + " is paired to " + u.enclosure + ".");
+  if(db.encIndex[enc] && db.encIndex[enc] !== board) return failPair("Enclosure already used", enc + " is paired to " + db.encIndex[enc] + ".");
 
   var b = classify(board), e = classify(enc);
   if(REQUIRE_MATCHING_PART_CODE || REQUIRE_MATCHING_SERIAL){
     if(!b.wellFormed || !e.wellFormed){
-      return reject("Code format not recognised",
+      return failPair("Code format not recognised",
         "Expected " + sampleCode("board") + " and " + sampleCode("enclosure") + ". Got " + board + " and " + enc + ".");
     }
   }
   if(REQUIRE_MATCHING_PART_CODE && b.partCode !== e.partCode){
     var diff = [];
     for(var i = 0; i < 9; i++) if(b.partCode.charAt(i) !== e.partCode.charAt(i)) diff.push(PART_FIELDS[i]);
-    return reject("Part codes do not match",
+    return failPair("Part codes do not match",
       "Board " + b.partCode + " · enclosure " + e.partCode
       + (diff.length ? " — differs on " + diff.join(", ") : "") + ". Wrong housing for this board.");
   }
   if(REQUIRE_MATCHING_SERIAL && b.runNo !== e.runNo){
-    return reject("Serial numbers do not match",
+    return failPair("Serial numbers do not match",
       "Board " + b.runNo + " · enclosure " + e.runNo + ". Find the matching pair.");
   }
   u.enclosure = enc;
@@ -1513,19 +1533,42 @@ function qrSvg(payload){
 
 function printMasterBox(box){
   if(!box) return;
-  var part = box.drivers.length ? (classify(box.drivers[0]).partCode || "") : "";
+  // Drop any page size left behind by a label-sheet print.
+  if(el("sheetStyle")) el("sheetStyle").textContent = "";
+  document.body.classList.remove("print-sheet");
+  var codes = (box.drivers || []).slice();
+  var n = codes.length || 1;
+
+  /* 100 x 50 mm label: QR on the left, the packed codes on the right.
+     The column count and text size are worked out from how many codes
+     there are, so they always fit without spilling off the label. */
+  var padMM = 2, gapMM = 2.5;
+  var qrMM  = 44;
+  var availW = 100 - padMM * 2 - qrMM - gapMM;
+  var availH = 50 - padMM * 2;
+  var chars  = codes.reduce(function(m, c){ return Math.max(m, c.length); }, 18);
+
+  var cols = 1, font = 0, rows = n;
+  for(var k = 1; k <= 4; k++){
+    var r = Math.ceil(n / k);
+    var byH = availH / (r * 1.2);
+    var byW = (availW / k - 1.2) / (chars * 0.62);
+    var f = Math.min(byH, byW);
+    if(f > font){ font = f; cols = k; rows = r; }
+    if(f >= 3.2) break;                 // comfortably readable, stop here
+  }
+  font = Math.max(1.3, Math.min(font, 4.2));
+
   el("printLabel").innerHTML = '<div class="label">'
-    + '<div class="top"><div class="meta">'
-    +   '<img class="lbl-logo" src="data:image/png;base64,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" alt="Ronch Excel">'
-    +   '<h1>MASTER PACKING BOX</h1>'
-    +   '<p class="boxid">' + box.id + '</p>'
-    +   '<p>Quantity: <b>' + box.quantity + ' LED drivers</b></p>'
-    +   (part ? '<p>Part code: <b>' + part + '</b></p>' : '')
-    +   '<p>Packed: ' + new Date(box.createdAt).toLocaleString() + '</p>'
-    +   '<p>Operator: ' + (box.operator || "") + '</p>'
-    + '</div>' + qrSvg(box.payload) + '</div>'
-    + '<div class="serials">' + box.drivers.map(function(s,i){ return '<div>' + (i+1) + '. ' + s + '</div>'; }).join('') + '</div>'
-    + '</div>';
+    + '<div class="boxqr">' + qrSvg(box.payload) + '</div>'
+    + '<div class="codes" style="font-size:' + font.toFixed(2) + 'mm;line-height:1.2;'
+    +   'max-height:' + availH + 'mm">'
+    +   codes.map(function(c){ return '<div>' + c + '</div>'; }).join("")
+    + '</div></div>';
+
+  var svg = el("printLabel").querySelector(".boxqr svg");
+  if(svg){ svg.setAttribute("width", qrMM + "mm"); svg.setAttribute("height", qrMM + "mm"); }
+
   setTimeout(function(){ window.print(); focusScan(); }, 80);
 }
 
@@ -1644,8 +1687,10 @@ function failButton(){
 function passButton(){
   var sug = (typeof suggestedVerdict === "function") ? suggestedVerdict() : null;
   if(sug && sug.verdict === "FAIL"){
-    if(!confirm("The limits failed this unit (" + A.captured.failing.join(", ")
-      + ").\n\nRecord a PASS anyway? This override is written to the event log."))
+    var why = (A.captured.failing && A.captured.failing.length)
+      ? "The limits failed this unit (" + A.captured.failing.join(", ") + ")."
+      : "The tester reported FAIL for this unit.";
+    if(!confirm(why + "\n\nRecord a PASS anyway? This override is written to the event log."))
       return;
     var u = db.units[pending.board];
     if(u) u.history.push({at:now(), station:station.key, operator:operator,
@@ -1683,7 +1728,11 @@ function recordVerdict(verdict, failCode){
   save();
   var label = pending.enclosure || pending.board, retests = u.retests;
   pending = null; hideFailCodes();
+  // The instrument's reading belongs to THIS unit only. Without clearing it,
+  // the next unit scanned within the reuse window inherits this verdict —
+  // which made every unit after a failure look like a failure too.
   A.captured = null; A.capturing = false; clearTimeout(A.captureTimer);
+  A.machineStatus = null; A.lastVerdictAt = 0; A.lastVerdictRaw = "";
   if(typeof renderAnalyser === "function") renderAnalyser();
   if(typeof paintSuggestion === "function") paintSuggestion();
   if(typeof renderAgeRow === "function") renderAgeRow();
@@ -1757,7 +1806,7 @@ function saveCsv(label, table){
     notify("wait","Nothing to export","No " + label + " records yet.");
     return;
   }
-  download("trial-" + label + "-" + stamp() + ".csv", toCsv(table), "text/csv");
+  download("ronch-" + label + "-" + stamp() + ".csv", toCsv(table), "text/csv");
   notify("ok","Exported", label + " · " + (table.length - 1) + " row" + (table.length === 2 ? "" : "s"));
 }
 function toCsv(table){
@@ -2350,7 +2399,7 @@ function batchCodes(batch, which){
 /* ---- printable label sheet: size driven entirely by the operator's input ---- */
 function qrLayout(){
   var c = (db.settings.qrPrint = Object.assign(
-    {page:"210x297", qr:18, w:50, h:25, margin:8, pw:100, ph:150},
+    {page:"custom", layout:"stack", qr:10, w:15, h:15, margin:0, pw:15, ph:15},
     db.settings.qrPrint || {}));
   var pw, ph, roll = false;
   if(c.page === "roll"){ roll = true; pw = c.w; ph = c.h; }
@@ -2365,11 +2414,35 @@ function qrLayout(){
           cols:cols, rows:rows, perPage:Math.max(0, cols * rows)};
 }
 
+/* With the code printed under the QR, the text has to fit the width of the
+   label on two lines AND fit the height left over below the QR. Returns the
+   line height in mm, or 0 if there is no room at all. */
+/* The code is printed on two fixed lines — the part code, then the serial —
+   rather than left to wrap, so the result is the same on every printer. */
+function splitCode(code){
+  var i = code.lastIndexOf("-");
+  if(i > 0 && i < code.length - 1) return [code.slice(0, i + 1), code.slice(i + 1)];
+  var h = Math.ceil(code.length / 2);
+  return [code.slice(0, h), code.slice(h)];
+}
+
+function codeTextMM(c){
+  var pad = 0.8, gap = 0.3;
+  var sample = BOARD_PREFIX + "-" + "ABCDEFGHI" + "-" + "000000";
+  var parts = splitCode(sample);
+  var longest = Math.max(parts[0].length, parts[1].length);
+  var byWidth  = (c.w - pad * 2) / (longest * 0.62);     // Courier advance ~0.62em
+  var byHeight = (c.h - pad * 2 - c.qr - gap) / 2.12;    // exactly two lines
+  var mm = Math.min(byWidth, byHeight);
+  return mm > 0 ? mm : 0;
+}
+
 function qrSizeChanged(){
   var c = (db.settings.qrPrint = Object.assign(
-    {page:"210x297", qr:18, w:50, h:25, margin:8, pw:100, ph:150},
+    {page:"custom", layout:"stack", qr:10, w:15, h:15, margin:0, pw:15, ph:15},
     db.settings.qrPrint || {}));
   c.page   = el("qrPage").value;
+  c.layout = el("qrLayout").value;
   c.qr     = Math.max(6,  Math.min(80,  parseFloat(el("qrSize").value)   || 18));
   c.w      = Math.max(10, Math.min(300, parseFloat(el("qrLblW").value)   || 50));
   c.h      = Math.max(8,  Math.min(300, parseFloat(el("qrLblH").value)   || 25));
@@ -2384,6 +2457,7 @@ function renderQrSizes(){
   if(!el("qrPage")) return;
   var L = qrLayout(), c = L.cfg;
   if(document.activeElement !== el("qrPage"))   el("qrPage").value   = c.page;
+  if(document.activeElement !== el("qrLayout")) el("qrLayout").value = c.layout || "stack";
   if(document.activeElement !== el("qrSize"))   el("qrSize").value   = c.qr;
   if(document.activeElement !== el("qrLblW"))   el("qrLblW").value   = c.w;
   if(document.activeElement !== el("qrLblH"))   el("qrLblH").value   = c.h;
@@ -2394,8 +2468,18 @@ function renderQrSizes(){
   el("qrMargin").disabled = L.roll;
 
   var box = el("qrFit"), msgs = [], bad = false;
-  if(c.qr > c.h - 2){ msgs.push("The QR is taller than the label — reduce it to " + Math.max(6, Math.floor(c.h - 2)) + " mm or less."); bad = true; }
-  if(c.qr > c.w - 12){ msgs.push("No room for the text beside the QR — widen the label or shrink the QR."); bad = true; }
+  var stack = (c.layout || "stack") === "stack";
+  if(stack){
+    if(c.qr > c.w - 1){ msgs.push("The QR is wider than the label — reduce it to "
+      + Math.max(6, Math.floor(c.w - 1)) + " mm or less."); bad = true; }
+    var tmm = codeTextMM(c);
+    if(tmm <= 0){ msgs.push("No room under the QR for the code — make the label taller or the QR smaller."); bad = true; }
+    else if(tmm < 1.2) msgs.push("The code text works out at " + tmm.toFixed(2)
+      + " mm high, which is very small. A taller label or a slightly smaller QR would read better.");
+  } else {
+    if(c.qr > c.h - 2){ msgs.push("The QR is taller than the label — reduce it to " + Math.max(6, Math.floor(c.h - 2)) + " mm or less."); bad = true; }
+    if(c.qr > c.w - 12){ msgs.push("No room for the text beside the QR — widen the label or shrink the QR."); bad = true; }
+  }
   if(!L.perPage){ msgs.push("The label does not fit the paper at this size."); bad = true; }
   if(c.qr < 10) msgs.push("Below about 10 mm a QR needs a high-resolution printer and a good scanner. Test one before a long run.");
 
@@ -2408,6 +2492,7 @@ function renderQrSizes(){
         : (L.cols + " across x " + L.rows + " down = " + L.perPage + " per page  ·  paper "
            + L.pw + " x " + L.ph + " mm"))
     + (n ? ("  ·  " + n + " labels = " + pages + " page" + (pages === 1 ? "" : "s")) : "")
+    + (stack ? ("  ·  code text " + codeTextMM(c).toFixed(2) + " mm on 2 lines") : "")
     + '</div>'
     + (msgs.length ? '<div style="margin-top:7px;font-size:13px;color:' + (bad ? "var(--bad)" : "var(--wait)") + '">'
         + msgs.join("<br>") + '</div>' : "");
@@ -2426,13 +2511,21 @@ function qrPrintSheet(firstPageOnly){
   var part = LAST_BATCH.batch.part, human = prettyPart(part), desc = variantShort(part);
   var qrPx = c.qr;
 
+  var stack = (c.layout || "stack") === "stack";
+  var tmm = stack ? codeTextMM(c) : 0;
+
   el("sheetStyle").textContent =
     "@media print{"
     + "@page{size:" + L.pw + "mm " + L.ph + "mm;margin:" + L.margin + "mm}"
     + "#printSheet .grid{display:grid;grid-template-columns:repeat(" + L.cols + "," + c.w + "mm);"
     +   "grid-auto-rows:" + c.h + "mm}"
-    + "#printSheet .lbl{width:" + c.w + "mm;height:" + c.h + "mm;padding:1.2mm}"
+    + "#printSheet .lbl{width:" + c.w + "mm;height:" + c.h + "mm;padding:"
+    +   (stack ? "0.8mm" : "1.2mm") + "}"
     + "#printSheet .lbl svg{width:" + qrPx + "mm;height:" + qrPx + "mm}"
+    + (stack
+        ? "#printSheet .lbl.stack .lblcode{font-size:" + tmm.toFixed(2) + "mm;"
+          + "margin-top:0.3mm;letter-spacing:-0.01em}"
+        : "")
     + "}";
 
   var html = "", i = 0;
@@ -2440,7 +2533,17 @@ function qrPrintSheet(firstPageOnly){
     var page = list.slice(i, i + L.perPage);
     html += '<div class="pg"><div class="grid">' + page.map(function(x){
       var q = qrcode(0, "M"); q.addData(x.code); q.make();
-      return '<div class="lbl">' + q.createSvgTag({cellSize:4, margin:1, scalable:true})
+      var svg = q.createSvgTag({cellSize:4, margin:1, scalable:true});
+      if(stack){
+        // Just the QR and its code underneath, nothing else — the code wraps
+        // to a second line and is sized to match the width of the QR.
+        var two = splitCode(x.code);
+        return '<div class="lbl stack">' + svg
+          + '<div class="tx"><div class="lblcode">'
+          +   '<div>' + two[0] + '</div><div>' + two[1] + '</div>'
+          + '</div></div></div>';
+      }
+      return '<div class="lbl">' + svg
         + '<div class="tx">'
         + '<div class="t1">' + (x.kind === "board" ? "BOARD" : "ENCLOSURE") + '</div>'
         + '<div class="t2">' + x.no + '</div>'
@@ -2457,6 +2560,9 @@ function qrPrintSheet(firstPageOnly){
     setTimeout(function(){
       document.body.classList.remove("print-sheet");
       el("printSheet").innerHTML = "";
+      // The sheet's @page rule must go too, or the next thing printed
+      // (the master box label) inherits this label's page size.
+      el("sheetStyle").textContent = "";
       focusScan();
     }, 400);
   }, 120);
@@ -2464,26 +2570,49 @@ function qrPrintSheet(firstPageOnly){
 
 /* ---- ZPL for a roll label printer: no label software, no page setup ---- */
 function zplFor(list, part){
-  // 203 dpi is the common roll printer resolution: 8 dots per mm.
-  var L = qrLayout(), DPMM = 8;
-  var pw = Math.round(L.cfg.w * DPMM), ll = Math.round(L.cfg.h * DPMM);
-  // ^BQ magnification 1..10; each step is about 0.75mm of QR per module row.
-  var mag = Math.max(1, Math.min(10, Math.round(L.cfg.qr / 3.1)));
-  var tx = Math.round(L.cfg.qr * DPMM) + 24;
   // Label printers expect plain ASCII; "·" and similar print as rubbish.
   // "^" and "~" are ZPL control characters and must not appear in field data.
   var ascii = function(t){
     return String(t).replace(/\u00B7/g, "-").replace(/[^\x20-\x7E]/g, "").replace(/[\^~]/g, "-");
   };
+  var L = qrLayout(), c = L.cfg, DPMM = 8;          // 203 dpi roll printers
+  var pw = Math.round(c.w * DPMM), ll = Math.round(c.h * DPMM);
+  var qrDots = Math.round(c.qr * DPMM);
   var human = ascii(prettyPart(part)), desc = ascii(variantShort(part));
-  return list.map(function(c){
+
+  if((c.layout || "stack") === "stack"){
+    // QR centred at the top, the code on two lines underneath it.
+    var modules = 33;                                // 25 data + quiet zone
+    var mag = Math.max(1, Math.min(10, Math.round(qrDots / modules)));
+    var qrW = mag * modules;
+    var qx  = Math.max(0, Math.round((pw - qrW) / 2));
+    var ty  = Math.min(ll - 20, 6 + qrW + 3);
+    return list.map(function(x){
+      var two = splitCode(ascii(x.code));
+      var longest = Math.max(two[0].length, two[1].length);
+      var fw = Math.max(5, Math.min(18, Math.floor((pw - 8) / longest)));
+      var fh = Math.max(6, Math.min(24, Math.floor(fw * 1.45)));
+      var lh = fh + 1;
+      var cx = function(t){ return Math.max(0, Math.round((pw - t.length * fw) / 2)); };
+      return "^XA\n^PW" + pw + "\n^LL" + ll + "\n^LH0,0\n"
+        + "^FO" + qx + ",6^BQN,2," + mag + "^FDLA," + x.code + "^FS\n"
+        + "^FO" + cx(two[0]) + "," + ty + "^A0N," + fh + "," + fw + "^FD" + two[0] + "^FS\n"
+        + "^FO" + cx(two[1]) + "," + (ty + lh) + "^A0N," + fh + "," + fw + "^FD" + two[1] + "^FS\n"
+        + "^XZ\n";
+    }).join("");
+  }
+
+  // QR on the left, details stacked to its right.
+  var mag2 = Math.max(1, Math.min(10, Math.round(c.qr / 3.1)));
+  var tx = qrDots + 24;
+  return list.map(function(x){
     return "^XA\n^PW" + pw + "\n^LL" + ll + "\n^LH0,0\n"
-      + "^FO16,16^BQN,2," + mag + "^FDLA," + c.code + "^FS\n"
-      + "^FO" + tx + ",18^A0N,24,24^FD" + (c.kind === "board" ? "BOARD" : "ENCLOSURE") + "^FS\n"
+      + "^FO16,16^BQN,2," + mag2 + "^FDLA," + x.code + "^FS\n"
+      + "^FO" + tx + ",18^A0N,24,24^FD" + (x.kind === "board" ? "BOARD" : "ENCLOSURE") + "^FS\n"
       + "^FO" + tx + ",48^A0N,28,28^FD" + human + "^FS\n"
-      + "^FO" + tx + ",82^A0N,42,42^FD" + c.no + "^FS\n"
+      + "^FO" + tx + ",82^A0N,42,42^FD" + x.no + "^FS\n"
       + "^FO" + tx + ",130^A0N,20,20^FD" + desc.slice(0, 30) + "^FS\n"
-      + "^FO16," + Math.max(24, ll - 26) + "^A0N,18,18^FD" + c.code + "^FS\n"
+      + "^FO16," + Math.max(24, ll - 26) + "^A0N,18,18^FD" + ascii(x.code) + "^FS\n"
       + "^XZ\n";
   }).join("");
 }
@@ -2746,7 +2875,7 @@ function doLimitsImport(){
 function exportLimits(){
   var rows = limitsToCsv();
   if(rows.length < 2) return notify("wait","No limits yet","Add limits before exporting.");
-  download("trial-limits-" + stamp() + ".csv",
+  download("ronch-limits-" + stamp() + ".csv",
     rows.map(function(r){ return r.join(","); }).join("\n"), "text/csv");
   notify("ok","Limits exported", (rows.length - 1) + " rows");
 }
@@ -3057,11 +3186,13 @@ function colRef(n){
 
 /* ---- styles: enough for a presentable report, written by hand ---- */
 var S_DEF=0, S_COMPANY=1, S_TITLE=2, S_META=3, S_BAND=4, S_HEAD=5,
-    S_CELL=6, S_CELLB=7, S_PCT=8, S_OK=9, S_BAD=10, S_LABEL=11;
+    S_CELL=6, S_CELLB=7, S_PCT=8, S_OK=9, S_BAD=10, S_LABEL=11,
+    S_MIN=12, S_INT=13, S_PCTB=14;
 
 var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
  + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
- + '<numFmts count="1"><numFmt numFmtId="164" formatCode="0.0%"/></numFmts>'
+ + '<numFmts count="2"><numFmt numFmtId="164" formatCode="0.0%"/>'
+ +   '<numFmt numFmtId="165" formatCode="0&quot; min&quot;"/></numFmts>'
  + '<fonts count="8">'
  +   '<font><sz val="11"/><name val="Calibri"/></font>'
  +   '<font><b/><sz val="11"/><name val="Calibri"/></font>'
@@ -3085,7 +3216,7 @@ var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
  +   '<top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>'
  + '</borders>'
  + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
- + '<cellXfs count="12">'
+ + '<cellXfs count="15">'
  +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
  +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
  +   '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
@@ -3098,6 +3229,9 @@ var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
  +   '<xf numFmtId="0" fontId="6" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
  +   '<xf numFmtId="0" fontId="7" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
  +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+ +   '<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
+ +   '<xf numFmtId="1" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
+ +   '<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
  + '</cellXfs>'
  + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
  + '</styleSheet>';
@@ -3109,8 +3243,14 @@ function sheetXml(sheet){
   var body = rows.map(function(r, ri){
     if(!r || !r.length) return '<row r="' + (ri + 1) + '"/>';
     var cells = r.map(function(c, ci){
-      var v = c, st = 0;
-      if(c && typeof c === "object" && !(c instanceof Date)){ v = c.v; st = c.s || 0; }
+      var v = c, st = 0, fm = null;
+      if(c && typeof c === "object" && !(c instanceof Date)){ v = c.v; st = c.s || 0; fm = c.f || null; }
+      if(fm){
+        /* A formula rather than a number, so the yields and totals recalculate
+           if anyone edits the stage table in Excel. */
+        return '<c r="' + colRef(ci) + (ri+1) + '"' + (st ? ' s="' + st + '"' : "")
+          + "><f>" + xmlEsc(String(fm).replace(/^=/, "")) + "</f></c>";
+      }
       if(v === null || v === undefined || v === "") {
         return st ? '<c r="' + colRef(ci) + (ri+1) + '" s="' + st + '"/>' : "";
       }
@@ -3199,7 +3339,7 @@ function saveWorkbook(fileLabel, sheets){
   var blob = new Blob([bytes], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   var a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "trial-" + fileLabel + "-" + stamp() + ".xlsx";
+  a.download = "ronch-" + fileLabel + "-" + stamp() + ".xlsx";
   a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
 }
@@ -3213,6 +3353,17 @@ var COMPANY = "RONCH EXCEL INDUSTRIES PVT. LTD.";
 function tzName(){
   try{ return Intl.DateTimeFormat().resolvedOptions().timeZone || "local"; }
   catch(e){ return "local"; }
+}
+/* Reports say "IST", not "Asia/Calcutta" — it is what the floor calls it. */
+function tzLabel(){
+  var z = tzName();
+  return (z === "Asia/Calcutta" || z === "Asia/Kolkata") ? "IST" : z;
+}
+/* The CRM-side model name, taken from the part code: position 5 -> "50 W" -> "50W". */
+function modelOf(part){
+  if(!part || part.length !== 9) return "";
+  var d = CODE_MASTER[4].map[part.charAt(4)];
+  return d ? d.replace(/\s+/g, "") : "";
 }
 function stampLocal(iso){
   if(!iso) return "";
@@ -3230,15 +3381,20 @@ function verdictCell(v){
 }
 function headRows(title, scopeText, count, width){
   var last = colRef(Math.max(1, width - 1));
+  var metaLast = colRef(Math.max(1, width - 2));
+  /* Column A is left clear on row 1 so the company name sits where it does on
+     the approved report; the record count goes in the last column of row 3. */
+  var meta = [{v:scopeText + "   |   Generated: " + new Date().toLocaleString()
+      + "   |   Times in " + tzLabel(), s:S_META}];
+  while(meta.length < Math.max(1, width - 1)) meta.push("");
+  meta.push({v:"Records: " + count, s:S_META});
   return {
     rows: [
-      [{v:COMPANY, s:S_COMPANY}],
+      ["", {v:COMPANY, s:S_COMPANY}],
       [{v:title, s:S_TITLE}],
-      [{v:scopeText + "   |   Generated: " + new Date().toLocaleString()
-          + "   |   Times in " + tzName(), s:S_META}, "", "", "", "", "", "", "",
-       "", "", "", "", "", "", "", "", {v:"Records: " + count, s:S_META}]
+      meta
     ],
-    merges: ["A1:" + last + "1", "A2:" + last + "2"]
+    merges: ["B1:" + last + "1", "A2:" + last + "2", "A3:" + metaLast + "3"]
   };
 }
 function scopeLabel(units){
@@ -3247,28 +3403,29 @@ function scopeLabel(units){
   var list = Object.keys(vs).sort();
   if(list.length === 1){
     var p = list[0];
-    return "Variant: " + prettyPart(p) + "   |   " + variantShort(p);
+    var cust = (p.length === 9 && CODE_MASTER[1].map[p.charAt(1)]) || "";
+    return "Variant: " + p + (cust ? "   |   Customer: " + cust : "");
   }
-  return "Variants: " + list.length + "   (" + list.map(prettyPart).join(", ") + ")";
+  return "Variants: " + list.length + "   (" + list.join(", ") + ")";
 }
 
 function stageSheet(title, cols, widths, units, rowFn){
   var h = headRows(title, scopeLabel(units), units.length, cols.length);
   var rows = h.rows.concat([[]], [cols.map(H)]);
   units.forEach(function(u){ var r = rowFn(u); if(r) rows.push(r); });
-  return {rows:rows, cols:widths, merges:h.merges, freeze:"A6"};
+  return {rows:rows, cols:widths, merges:h.merges, freeze:"B6"};
 }
 
 function reportSheets(units){
   var U = units.slice().sort(byVariantThenTime);
 
   var allStages = stageSheet("ALL STAGES - UNIT TRACEABILITY",
-    ["Board ID","Enclosure ID","Part Code","Variant","Status","MI Line Completed","MI Operator",
+    ["Board ID","Enclosure ID","Part Code","Model","Status","MI Line Completed","MI Operator",
      "PCBA Result","PCBA Tested","Hi-pot Result","Hi-pot Tested","Ageing Loaded","Ageing Unloaded",
      "Final Result","Final Tested","Master Box","Packed At","Fail Codes","Retests"],
-    [22,22,15,34,12,20,11,12,20,13,20,20,20,12,20,22,20,22,9], U,
+    [22,22,15,9,11,21,12,15,21,15,21,21,21,15,21,24,21,15,9], U,
     function(u){
-      return [C(u.board), C(u.enclosure || ""), C(prettyPart(variantOf(u))), C(variantShort(variantOf(u))),
+      return [C(u.board), C(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
         C(u.status === "PASS" ? "PACKED" : u.status),
         C(stampLocal(u.miLine && u.miLine.at)), C(u.miLine ? u.miLine.operator : ""),
         verdictCell(u.stage1 && u.stage1.verdict), C(stampLocal(u.stage1 && u.stage1.at)),
@@ -3282,9 +3439,9 @@ function reportSheets(units){
     });
 
   var mi = stageSheet("STAGE 1 - MI LINE",
-    ["Board ID","Part Code","Variant","Completed At","Operator"],
-    [22,15,34,20,11], U.filter(function(u){ return u.miLine; }),
-    function(u){ return [C(u.board), C(prettyPart(variantOf(u))), C(variantShort(variantOf(u))),
+    ["Board ID","Part Code","Model","Completed At","Operator"],
+    [22,15,9,21,12], U.filter(function(u){ return u.miLine; }),
+    function(u){ return [C(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
       C(stampLocal(u.miLine.at)), C(u.miLine.operator)]; });
 
   var codes = [], mUnits = {};
@@ -3296,16 +3453,16 @@ function reportSheets(units){
   });
   codes.sort();
   var pcba = stageSheet("STAGE 2 - PCBA TESTING",
-    ["Board ID","Part Code","Variant","Result","Limit Verdict","Machine Verdict","Agree",
+    ["Board ID","Part Code","Model","Operator Verdict","Limit Verdict","Machine Verdict","Agree",
      "Out of Limits","Tested At","Operator","Fail Code","Retests"]
       .concat(codes.map(function(c){ return mUnits[c] ? c + " (" + mUnits[c] + ")" : c; }))
       .concat(["Samples Averaged","Analyser Raw"]),
-    [22,15,34,10,13,15,8,20,20,11,18,9].concat(codes.map(function(){ return 12; })).concat([15,40]),
+    [22,15,9,15,13,15,8,20,21,12,18,9].concat(codes.map(function(){ return 12; })).concat([15,40]),
     U.filter(function(u){ return u.stage1; }),
     function(u){
       var by = {}; (u.stage1.measurements || []).forEach(function(m){ by[m.code] = m.value; });
       var lv = u.stage1.limitVerdict || "", mv = u.stage1.machineStatus || "", ref = lv || mv;
-      return [C(u.board), C(prettyPart(variantOf(u))), C(variantShort(variantOf(u))),
+      return [C(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
         verdictCell(u.stage1.verdict), C(lv), C(mv),
         C(ref ? (ref === u.stage1.verdict ? "yes" : "NO") : ""),
         C(u.stage1.outOfLimits || ""), C(stampLocal(u.stage1.at)), C(u.stage1.operator),
@@ -3315,20 +3472,21 @@ function reportSheets(units){
     });
 
   var hipot = stageSheet("STAGE 3 - HI-POT AND GROUND TEST",
-    ["Board ID","Enclosure ID","Part Code","Variant","Result","Tested At","Operator","Fail Code"],
-    [22,22,15,34,10,20,11,18], U.filter(function(u){ return u.stage2; }),
-    function(u){ return [C(u.board), C(u.enclosure || ""), C(prettyPart(variantOf(u))),
-      C(variantShort(variantOf(u))), verdictCell(u.stage2.verdict), C(stampLocal(u.stage2.at)),
+    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code"],
+    [22,22,15,9,10,21,12,18], U.filter(function(u){ return u.stage2; }),
+    function(u){ return [C(u.board), C(u.enclosure || ""), C(variantOf(u)),
+      C(modelOf(variantOf(u))), verdictCell(u.stage2.verdict), C(stampLocal(u.stage2.at)),
       C(u.stage2.operator), C(u.stage2.failCode || "")]; });
 
   var ageing = stageSheet("STAGE 4 - AGEING",
-    ["Board ID","Enclosure ID","Part Code","Variant","Loaded At","Unloaded At","Ageing (min)","Required (min)","State","Meets Required","Result","Fail Code"],
-    [22,22,15,34,20,20,13,15,13,15,10,18], U.filter(function(u){ return u.ageingIn; }),
+    ["Board ID","Enclosure ID","Part Code","Model","Loaded At","Unloaded At","Ageing (min)",
+     "Required (min)","State","Meets Min Ageing","Verdict","Fail Code"],
+    [22,22,15,9,21,21,13,15,13,17,10,18], U.filter(function(u){ return u.ageingIn; }),
     function(u){
       var end = u.ageingOut ? new Date(u.ageingOut).getTime() : Date.now();
       var mins = Number(((end - new Date(u.ageingIn).getTime()) / 60000).toFixed(1));
       var need = ageingMinsForUnit(u);
-      return [C(u.board), C(u.enclosure || ""), C(prettyPart(variantOf(u))), C(variantShort(variantOf(u))),
+      return [C(u.board), C(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
         C(stampLocal(u.ageingIn)), C(stampLocal(u.ageingOut)), C(mins), C(need),
         C(u.ageingOut ? "unloaded" : "in chamber"),
         (mins >= need ? {v:"YES", s:S_OK} : {v:"NO", s:S_BAD}),
@@ -3337,10 +3495,10 @@ function reportSheets(units){
     });
 
   var fin = stageSheet("STAGE 5 - FINAL TESTING",
-    ["Board ID","Enclosure ID","Part Code","Variant","Result","Tested At","Operator","Fail Code","Status"],
-    [22,22,15,34,10,20,11,18,12], U.filter(function(u){ return u.stage4; }),
-    function(u){ return [C(u.board), C(u.enclosure || ""), C(prettyPart(variantOf(u))),
-      C(variantShort(variantOf(u))), verdictCell(u.stage4.verdict), C(stampLocal(u.stage4.at)),
+    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code","Status"],
+    [22,22,15,9,10,21,12,18,12], U.filter(function(u){ return u.stage4; }),
+    function(u){ return [C(u.board), C(u.enclosure || ""), C(variantOf(u)),
+      C(modelOf(variantOf(u))), verdictCell(u.stage4.verdict), C(stampLocal(u.stage4.at)),
       C(u.stage4.operator), C(u.stage4.failCode || ""),
       C(u.status === "PASS" ? "PACKED" : u.status)]; });
 
@@ -3349,16 +3507,17 @@ function reportSheets(units){
   var boxes = (db.boxes || []).filter(function(b){ return inScope[b.id]; });
   var maxQty = boxes.reduce(function(m, b){ return Math.max(m, (b.drivers || []).length); }, 0);
   var ph = headRows("STAGE 6 - PACKING (MASTER BOXES)", scopeLabel(U), boxes.length, 6 + maxQty);
-  var prow = [["Master Box","Created At","Operator","Quantity","Part Code","Variant"]
-    .concat(Array.apply(null, {length:maxQty}).map(function(_, i){ return "Enclosure " + (i+1); })).map(H)];
+  /* One heading for the whole block of codes, as on the approved report — the
+     codes themselves run on across the row. */
+  var prow = [["Master Box","Created At","Operator","Quantity","Part Code","Model","Enclosure IDs in Box"].map(H)];
   boxes.forEach(function(b){
     var part = (b.drivers && b.drivers.length) ? (classify(b.drivers[0]).partCode || "") : "";
     prow.push([C(b.id), C(stampLocal(b.createdAt)), C(b.operator || ""), C(b.quantity || (b.drivers||[]).length),
-      C(prettyPart(part)), C(variantShort(part))]
+      C(part), C(modelOf(part))]
       .concat((b.drivers || []).map(function(d){ return C(d); })));
   });
-  var packing = {rows: ph.rows.concat([[]], prow), merges: ph.merges, freeze:"A6",
-                 cols:[24,20,11,10,15,34].concat(Array.apply(null, {length:maxQty}).map(function(){ return 22; }))};
+  var packing = {rows: ph.rows.concat([[]], prow), merges: ph.merges, freeze:"B6",
+                 cols:[24,21,12,10,15,9].concat(Array.apply(null, {length:maxQty}).map(function(){ return 22; }))};
 
   var ev = [];
   U.forEach(function(u){
@@ -3370,7 +3529,7 @@ function reportSheets(units){
   var eh = headRows("EVENT LOG - FULL ACTIVITY HISTORY", scopeLabel(U), ev.length, 7);
   var erows = eh.rows.concat([[]], [["Timestamp","Station","Operator","Board ID","Enclosure ID","Event","Detail"].map(H)]);
   ev.forEach(function(r){ erows.push([C(stampLocal(r[0])), C(r[1]), C(r[2]), C(r[3]), C(r[4]), C(r[5]), C(r[6])]); });
-  var log = {rows:erows, cols:[20,11,11,22,22,30,26], merges:eh.merges, freeze:"A6"};
+  var log = {rows:erows, cols:[21,12,12,22,22,30,26], merges:eh.merges, freeze:"B6"};
 
   return {allStages:allStages, mi:mi, pcba:pcba, hipot:hipot, ageing:ageing,
           fin:fin, packing:packing, log:log};
@@ -3392,63 +3551,120 @@ function summarySheet(units, part){
   var rework = n(function(u){ return u.status === "REWORK"; });
   var boxIds = {}; units.forEach(function(u){ if(u.packing) boxIds[u.packing.boxId] = 1; });
   var boxCount = Object.keys(boxIds).length;
-  var frac = function(a, b){ return b ? {v:(a/b), s:S_PCT} : C("-"); };
+  /* Built with live formulas rather than fixed numbers, so the yields and the
+     overall figures recalculate if anyone corrects the stage table by hand.
+     Row numbers are tracked as the rows are pushed, because the variant
+     specification block is only as long as the code master makes it. */
+  var rows = [], merges = [];
+  var R = function(){ return rows.length + 1; };
+  var band = function(t){
+    var r = [{v:t, s:S_BAND}];
+    while(r.length < 6) r.push({v:"", s:S_BAND});
+    return r;
+  };
+  var pctF = function(r){ return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")', s:S_PCTB}; };
 
-  var rows = [
-    [{v:COMPANY, s:S_COMPANY}],
-    [{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT", s:S_TITLE}],
-    [{v:"Variant code", s:S_LABEL}, {v:prettyPart(part), s:S_CELLB}, "",
-     {v:"Generated", s:S_LABEL}, C(new Date().toLocaleString())],
-    [{v:"Description", s:S_LABEL}, C(variantShort(part)), "",
-     {v:"Units on record", s:S_LABEL}, C(units.length)],
-    [{v:"Required ageing time (min)", s:S_LABEL}, C(ageingMinsFor(part)), "",
-     {v:"Times in", s:S_LABEL}, C(tzName())],
-    [],
-    [{v:"VARIANT SPECIFICATION", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND},
-     {v:"", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND}],
-    [H("Parameter"), H("Code"), H("Description")]
-  ];
-  describeVariant(part).forEach(function(r){ rows.push([C(r[0]), C(r[1]), C(r[2])]); });
+  rows.push(["", {v:COMPANY, s:S_COMPANY}]);
+  rows.push([{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT", s:S_TITLE}]);
+  merges.push("B1:F1", "A2:F2");
   rows.push([]);
-  rows.push([{v:"STAGE-WISE TRIAL RESULTS", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND},
-             {v:"", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND}]);
-  rows.push(["Stage","Quantity","Pass","Fail","First Pass Yield","Notes"].map(H));
-  rows.push([C("1 - MI Line"), C(miQty), C("-"), C("-"), C("-"), C("Boards scanned into the system")]);
-  rows.push([C("2 - PCBA testing"), C(p1+f1), C(p1), C(f1), frac(p1, p1+f1), C("")]);
-  rows.push([C("3 - Hi-pot and ground"), C(p2+f2), C(p2), C(f2), frac(p2, p2+f2),
+
+  var rM1 = R();
+  rows.push([{v:"Variant code", s:S_LABEL}, {v:part, s:S_CELLB}, "",
+             {v:"Generated", s:S_LABEL}, C(new Date().toLocaleString())]);
+  var rM2 = R();
+  var mUnits = {v:"Units on record", s:S_LABEL};
+  rows.push([{v:"Minimum ageing time", s:S_LABEL}, {v:ageingMinsFor(part), s:S_MIN}, "",
+             mUnits, null]);
+  merges.push("B" + rM1 + ":C" + rM1, "E" + rM1 + ":F" + rM1,
+              "B" + rM2 + ":C" + rM2, "E" + rM2 + ":F" + rM2);
+  rows.push([]);
+
+  var rSB = R(); rows.push(band("VARIANT SPECIFICATION"));
+  var rSH = R(); rows.push([H("Parameter"), H("Code"), H("Description")]);
+  merges.push("A" + rSB + ":F" + rSB, "C" + rSH + ":F" + rSH);
+  describeVariant(part).forEach(function(r){
+    merges.push("C" + R() + ":F" + R());
+    rows.push([{v:r[0], s:S_CELLB}, C(r[1]), C(r[2])]);
+  });
+  rows.push([]);
+
+  var rTB = R(); rows.push(band("STAGE-WISE TRIAL RESULTS"));
+  merges.push("A" + rTB + ":F" + rTB);
+  rows.push(["Stage","Quantity","Pass","Fail","First Pass Yield %","Notes"].map(H));
+
+  var SN = function(t){ return {v:t, s:S_CELLB}; };
+  var rMI = R();
+  rows.push([SN("1 - MI Line"), C(miQty), C("-"), C("-"), C("-"), C("Boards scanned into the system")]);
+  var rP = R();
+  rows.push([SN("2 - PCBA testing"), C(p1+f1), C(p1), C(f1), pctF(rP), C("")]);
+  var rH = R();
+  rows.push([SN("3 - Hi-pot and ground"), C(p2+f2), C(p2), C(f2), pctF(rH),
              C(n(function(u){ return u.enclosure; }) + " paired to an enclosure")]);
-  rows.push([C("4a - Ageing load"), C(loaded), C("-"), C("-"), C("-"), C(stillIn + " still in the chamber")]);
-  rows.push([C("4b - Ageing unload"), C(p3+f3), C(p3), C(f3), frac(p3, p3+f3), C("")]);
-  rows.push([C("5 - Final testing"), C(p4+f4), C(p4), C(f4), frac(p4, p4+f4), C("")]);
-  rows.push([C("6 - Packing"), C(packed), C("-"), C("-"), C("-"),
-             C(boxCount + " master boxes, " + ready + " ready to pack")]);
+  var rAL = R();
+  rows.push([SN("4a - Ageing load"), C(loaded), C("-"), C("-"), C("-"), C(stillIn + " still in the chamber")]);
+  var rAU = R();
+  rows.push([SN("4b - Ageing unload"), C(p3+f3), C(p3), C(f3), pctF(rAU), C("")]);
+  var rF = R();
+  rows.push([SN("5 - Final testing"), C(p4+f4), C(p4), C(f4), pctF(rF), C("")]);
+  var rPk = R();
+  rows.push([SN("6 - Packing"), C(packed), C("-"), C("-"), C("-"),
+             C(boxCount + " master boxes · " + ready + " ready to pack")]);
   rows.push([]);
-  rows.push([{v:"OVERALL SUMMARY", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND},
-             {v:"", s:S_BAND}, {v:"", s:S_BAND}, {v:"", s:S_BAND}]);
-  var ov = [["Units on record", units.length], ["Completed and packed", packed],
-            ["Passed final, not packed", ready], ["Currently in chamber", stillIn],
-            ["In rework", rework], ["Master boxes completed", boxCount]];
-  ov.forEach(function(r){ rows.push([{v:r[0], s:S_LABEL}, "", "", "", C(r[1])]); });
-  rows.push([{v:"Overall yield (final pass / MI scanned)", s:S_LABEL}, "", "", "", frac(p4, miQty)]);
-  rows.push([]);
-  var yieldPct = miQty ? (p4 / miQty * 100) : 0;
-  var ok = miQty > 0 && f1 + f2 + f3 + f4 === 0;
-  rows.push([{v:"TRIAL RESULT:  " + (ok ? "PASS" : "REVIEW") + "   -   "
-      + yieldPct.toFixed(1) + "% yield, " + packed + " of " + miQty + " units packed",
-      s: ok ? S_OK : S_BAD}]);
-  rows.push([]);
-  rows.push([{v:"Prepared by", s:S_LABEL}, "", {v:"Checked by", s:S_LABEL}, "", {v:"Approved by", s:S_LABEL}]);
-  rows.push([C(""), "", C(""), "", C("")]);
 
-  return {rows:rows, cols:[34,14,12,12,20,40],
-          merges:["A1:F1","A2:F2","A" + (rows.length - 2) + ":F" + (rows.length - 2)]};
+  var rOB = R(); rows.push(band("OVERALL SUMMARY"));
+  merges.push("A" + rOB + ":F" + rOB);
+  var over = [
+    ["Units on record",                          {f:"=B" + rMI, s:S_INT}],
+    ["Completed and packed",                     {f:"=B" + rPk, s:S_INT}],
+    ["Passed final, not packed",                 {f:"=MAX(0,C" + rF + "-B" + rPk + ")", s:S_INT}],
+    ["Currently in chamber",                     {v:stillIn, s:S_INT}],
+    ["In rework",                                {v:rework, s:S_INT}],
+    ["Overall yield % (final pass / MI scanned)", {f:"=IF(B" + rMI + ">0,C" + rF + "/B" + rMI + ",0)", s:S_PCTB}],
+    ["Master boxes completed",                   {v:boxCount, s:S_INT}]
+  ];
+  var ref = {};
+  over.forEach(function(o, i){
+    var r = R();
+    ref[i] = "E" + r;
+    merges.push("A" + r + ":D" + r, "E" + r + ":F" + r);
+    rows.push([{v:o[0], s:S_LABEL}, "", "", "", o[1]]);
+  });
+  /* "Units on record" at the top of the page reads off the MI Line row too. */
+  rows[rM2 - 1][4] = {f:"=B" + rMI, s:S_INT};
+  rows.push([]);
+
+  var rR = R();
+  merges.push("A" + rR + ":F" + rR);
+  rows.push([{f:'=IF(AND(' + ref[5] + '=1,' + ref[2] + '=0,' + ref[3] + '=0,' + ref[4] + '=0),'
+    + '"TRIAL RESULT:  PASS  -  "&TEXT(' + ref[5] + ',"0%")&" yield, all "&' + ref[0] + '&" units packed",'
+    + '"TRIAL RESULT:  REVIEW REQUIRED  -  check units in chamber / rework / not packed")',
+    s:S_LABEL}]);
+  rows.push([]);
+
+  var rS1 = R();
+  rows.push([{v:"Prepared by", s:S_LABEL}, "", {v:"Checked by", s:S_LABEL}, "", {v:"Approved by", s:S_LABEL}]);
+  var rS2 = R();
+  rows.push([C(""), "", C(""), "", C("")]);
+  [rS1, rS2].forEach(function(r){
+    merges.push("A" + r + ":B" + r, "C" + r + ":D" + r, "E" + r + ":F" + r);
+  });
+  rows.push([]);
+  var rK = R();
+  merges.push("A" + rK + ":F" + rK);
+  rows.push([C("Colour key: blue = recorded input, black = calculated. '-' = not applicable for "
+    + "that stage. Yield and summary figures recalculate from the stage table.")]);
+
+  return {rows:rows, cols:[30,13,12,17,18,42], merges:merges};
 }
 
 function exportSummary(){
   var groups = variantGroups();
   if(!groups.length) return notify("wait","Nothing to report","No records have been created yet.");
+  var one = groups.length === 1;
   saveWorkbook("summary", groups.map(function(g){
-    return [prettyPart(g.variant), summarySheet(g.units, g.variant)];
+    return [one ? "Trial Summary" : "Trial Summary " + g.variant,
+            summarySheet(g.units, g.variant)];
   }));
   notify("ok","Summary report exported",
     groups.length + " variant" + (groups.length === 1 ? "" : "s") + ", one sheet each");
@@ -3459,8 +3675,10 @@ function exportAllReports(){
   if(!U.length) return notify("wait","Nothing to report","No records have been created yet.");
   var groups = variantGroups();
   var r = reportSheets(U);
+  var one = groups.length === 1;
   var sheets = groups.map(function(g){
-    return [prettyPart(g.variant), summarySheet(g.units, g.variant)];
+    return [one ? "Summary" : "Summary " + g.variant,
+            summarySheet(g.units, g.variant)];
   }).concat([
     ["All Stages",      r.allStages],
     ["1 MI Line",       r.mi],
@@ -3514,7 +3732,7 @@ function exportEverything(){
     out.push([]);
   }
 
-  out.push(["Driver traceability — trial export"]);
+  out.push(["Driver traceability — full export"]);
   out.push(["Generated", new Date().toLocaleString()]);
   out.push(["Units on record", units.length]);
   out.push(["Minimum ageing (min)", db.settings.minAgeingMinutes]);
@@ -3529,17 +3747,17 @@ function exportEverything(){
   section("STAGE 6 — Packing", stageTable("PACKING"));
   section("EVENT LOG — every scan, oldest first", logTable());
 
-  download("trial-full-export-" + stamp() + ".csv", toCsv(out), "text/csv");
+  download("ronch-full-export-" + stamp() + ".csv", toCsv(out), "text/csv");
   notify("ok","Exported everything", units.length + " unit" + (units.length === 1 ? "" : "s") + " across all sections");
 }
 function backup(){
-  download("trial-backup-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(db, null, 2), "application/json");
+  download("ronch-backup-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(db, null, 2), "application/json");
 }
 function clearAll(){
-  if(!confirm("Delete all trial records? This cannot be undone.")) return;
+  if(!confirm("Delete all records? This cannot be undone.")) return;
   db.units = {}; db.encIndex = {}; db.boxes = []; db.packing = {current:[]}; save();
   pending = null; halfPair = null;
-  banner("wait","Trial data cleared","All records removed."); render();
+  banner("wait","All records cleared","Every record has been removed."); render();
 }
 function setMinAge(v){ db.settings.minAgeingMinutes = Number(v); save(); }
 

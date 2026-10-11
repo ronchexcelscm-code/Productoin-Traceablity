@@ -1,6 +1,6 @@
 {
-  "name": "Ronch Traceability",
-  "short_name": "Traceability",
+  "name": "Ronch Excel Industries Pvt. Ltd. \u2014 Traceability",
+  "short_name": "Ronch Traceability",
   "description": "LED driver serial traceability from MI Line to packed master box.",
   "start_url": "./",
   "scope": "./",
@@ -8,7 +8,17 @@
   "background_color": "#10151A",
   "theme_color": "#10151A",
   "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

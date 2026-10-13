@@ -121,8 +121,12 @@
     text-transform:uppercase;flex:0 0 auto}
   @media (max-width:860px){ .hdr-name{display:none} }
 
-  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:12px;margin-bottom:34px}
+  /* Six tiles: one row on a bench screen, 3 + 3 on a laptop, 2 across on a
+     tablet. Fixed counts rather than auto-fit, so the row never leaves a
+     single orphan tile stranded on a line of its own. */
+  .stat-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:34px}
+  @media(max-width:1180px){ .stat-strip{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:640px){ .stat-strip{grid-template-columns:repeat(2,1fr)} }
   .stat{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:15px 17px;
     position:relative;overflow:hidden}
   .stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent,var(--line))}
@@ -1226,7 +1230,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-2350";
+var BUILD_ID = "2026-10-14-0005";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -5421,14 +5425,16 @@ function renderDashboard(){
   var list = Object.keys(db.units).map(function(k){ return db.units[k]; });
   var n = function(f){ var c = 0; list.forEach(function(u){ if(f(u)) c++; }); return c; };
   var pk = packedByVariant();
+  /* Six tiles, read left to right as the line runs, with the rework pair last.
+     Scrapped is deliberately not here — it is a closed-out figure rather than
+     work in progress, and it stays in the station counts bar and the reports. */
   var tiles = [
     ["WIP Production",      n(function(u){ return u.status !== "SCRAP"; }),                  "var(--info)"],
     ["In Ageing",           n(function(u){ return u.ageingIn && !u.ageingOut; }),            "var(--wait)"],
     ["Pending for Packing", n(function(u){ return u.stage4 && u.stage4.verdict === "PASS" && !u.packing; }), "var(--ok)"],
+    ["Packed",              pk.totalPcs,                                                     "var(--ok)"],
     ["WIP Rework Bench",    n(function(u){ return u.status === "REWORK"; }),                 "var(--bad)"],
-    ["Rework Completed",    n(function(u){ return u.status === "REPAIRED"; }),               "var(--wait)"],
-    ["Scrapped",            n(function(u){ return u.status === "SCRAP"; }),                  "var(--dim)"],
-    ["Packed",              pk.totalPcs,                                                     "var(--dim)"]
+    ["Rework Completed",    n(function(u){ return u.status === "REPAIRED"; }),               "var(--wait)"]
   ];
   el("dashStats").innerHTML = tiles.map(function(t){
     return '<div class="stat" style="--accent:' + t[2] + '">'

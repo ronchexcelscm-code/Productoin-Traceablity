@@ -595,6 +595,66 @@
       <div id="ageNote" class="muted" style="font-size:12px;margin-top:9px"></div>
     </div>
 
+    <!-- Final testing: the multi-position driver tester reports by fixture
+         position, so the operator scans each driver into its position here. -->
+    <div id="ftRow" class="hide" style="margin-top:22px;padding:14px 16px;background:var(--panel);
+         border:1px solid var(--line);border-radius:6px">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <strong style="font-size:15px">Driver tester fixture</strong>
+        <label style="color:var(--dim);font-size:14px;display:flex;align-items:center;gap:7px;white-space:nowrap">
+          <input id="ftUse" type="checkbox" onchange="ftToggle(this.checked)"> Scan into fixture positions
+        </label>
+        <div style="flex:1"></div>
+        <span id="ftNote" class="muted" style="font-size:13px"></span>
+      </div>
+      <div id="ftBody" class="hide">
+        <div id="ftSlots" style="display:flex;flex-wrap:wrap;gap:9px;margin-top:13px"></div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px">
+          <button class="verdict pass" style="padding:9px 20px;font-size:15px" onclick="ftLock()">Lock set &amp; test</button>
+          <button class="ghost" onclick="ftClear()">Clear positions</button>
+          <label class="ghost" style="cursor:pointer;padding:9px 15px;border:1px solid var(--line);border-radius:6px">
+            Import tester file
+            <input id="ftFile" type="file" accept=".csv,.txt,.tsv" style="display:none"
+                   onchange="ftImport(this.files && this.files[0])">
+          </label>
+          <label style="color:var(--dim);font-size:14px">Tester clock offset (min)
+            <input id="ftOffset" class="small" type="number" step="1" style="margin-left:7px;width:86px"
+                   onchange="ftSetOffset(this.value)">
+          </label>
+        </div>
+        <div id="ftResult" style="font-size:13px;margin-top:12px;white-space:pre-wrap;color:var(--dim)"></div>
+      </div>
+    </div>
+
+    <!-- Repair bench: what was found, what was done, and where it goes next -->
+    <div id="repRow" class="hide" style="margin-top:22px;padding:16px;background:var(--panel);
+         border:1px solid var(--line);border-radius:6px">
+      <div id="repHead" style="font-size:16px;margin-bottom:6px"></div>
+      <div id="repHist" class="muted" style="font-size:13px;white-space:pre-wrap;margin-bottom:15px"></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <label style="color:var(--dim);font-size:13px">Defect found<br>
+          <select id="repDefect" class="small" style="width:250px"></select></label>
+        <label style="color:var(--dim);font-size:13px">Action taken<br>
+          <select id="repAction" class="small" style="width:230px"></select></label>
+        <label style="color:var(--dim);font-size:13px;flex:1;min-width:230px">Components replaced
+          <br><input id="repParts" class="small" style="width:100%"
+                     placeholder="e.g. Q1 MOSFET, C7 470uF 100V"></label>
+      </div>
+      <label style="color:var(--dim);font-size:13px;display:block;margin-top:12px">Note (optional)
+        <br><input id="repNote" class="small" style="width:100%"></label>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-top:17px">
+        <button class="verdict pass" style="padding:10px 22px;font-size:15px;white-space:nowrap"
+                onclick="repDone()">Repaired — send to PCBA</button>
+        <button class="ghost" onclick="repCancel()">Cancel</button>
+        <div style="flex:1"></div>
+        <label style="color:var(--dim);font-size:13px">Scrap reason<br>
+          <select id="repScrap" class="small" style="width:230px"></select></label>
+        <button class="verdict fail" style="padding:10px 20px;font-size:15px"
+                onclick="repScrapUnit()">Scrap this driver</button>
+      </div>
+    </div>
+
+
     <div id="boxQtyRow" class="hide" style="margin-top:22px;padding:14px 16px;background:var(--panel);
      border:1px solid var(--line);border-radius:6px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
   <label style="color:var(--dim);font-size:15px">Drivers per master box
@@ -654,6 +714,8 @@
         <button class="ghost" onclick="exportStage('AGEING')">Ageing</button>
         <button class="ghost" onclick="exportStage('FINAL')">Final testing</button>
         <button class="ghost" onclick="exportStage('PACKING')">Packing</button>
+        <button class="ghost" onclick="exportStage('REJECT')">Rejections</button>
+        <button class="ghost" onclick="exportStage('REPAIR')">Repairs</button>
         <button class="ghost" onclick="exportLog()">Every scan</button>
       </div>
       <div id="tableWrap" style="overflow-x:auto"></div>
@@ -728,8 +790,11 @@ function stable(o){ return JSON.stringify(o); }
 
 function unitDoc(u){
   var d = JSON.parse(JSON.stringify(u));
-  // "open" drives the live query: a unit stays live until it is packed or scrapped.
-  d.open = !(u.packing || u.status === "SCRAP");
+  /* "open" drives the live query: a unit stays live until it is packed.
+     A scrapped unit deliberately stays open — every terminal has to keep
+     seeing it, otherwise its code could be scanned in again at MI Line and a
+     fresh record created for a driver that was thrown away. */
+  d.open = !u.packing;
   d.part = variantOf(u);
   d._ts = Date.now();
   return d;
@@ -807,15 +872,16 @@ function flushSync(){
   });
 }
 
-/* A unit that has been packed or scrapped, and whose record is safely written,
-   is dropped from memory. Without this a terminal would accumulate every driver
-   it ever saw across a shift. Units pulled in for a report are left alone. */
+/* A packed unit whose record is safely written is dropped from memory.
+   Without this a terminal would accumulate every driver it ever saw across a
+   shift. Scrapped units are kept, so their codes stay blocked everywhere.
+   Units pulled in for a report are left alone. */
 function releaseClosed(){
   var freed = 0;
   Object.keys(db.units).forEach(function(k){
     var u = db.units[k];
     if(LOADED_FOR_REPORT[k]) return;
-    if(!(u.packing || u.status === "SCRAP")) return;
+    if(!u.packing) return;
     if(SHADOW.units[k] !== stable(u)) return;   // not written yet
     delete db.units[k]; delete SHADOW.units[k]; freed++;
   });
@@ -954,6 +1020,7 @@ function renderAll(){
   if(typeof render === "function") render();
   if(typeof renderDashboard === "function") renderDashboard();
   if(typeof renderAgeRow === "function") renderAgeRow();
+  if(typeof renderFt === "function") renderFt();
 }
 
 /* ---------- a unit that is no longer in the live set ---------- */
@@ -1026,7 +1093,7 @@ function loadRange(fromISO, toISO, cb){
 function clearReportLoad(){
   Object.keys(LOADED_FOR_REPORT).forEach(function(k){
     var u = db.units[k];
-    if(u && (u.packing || u.status === "SCRAP")){ delete db.units[k]; delete SHADOW.units[k]; }
+    if(u && u.packing){ delete db.units[k]; delete SHADOW.units[k]; }
   });
   LOADED_FOR_REPORT = {};
   renderAll();
@@ -1127,7 +1194,11 @@ var STAGES = [
     prompt:"Scan each enclosure as it comes out of the chamber"},
   {id:"5",  key:"FINAL",      name:"Final testing",     scan:"enclosure", verdict:true},
   {id:"6",  key:"PACKING",    name:"Packing",           scan:"enclosure", verdict:false,
-    prompt:"Scan 10 finished drivers for one master packing box"}
+    prompt:"Scan 10 finished drivers for one master packing box"},
+  /* Every failed driver passes through here. Nothing can be re-tested until
+     the repair is recorded, which is what makes the rejection data complete. */
+  {id:"R",  key:"REPAIR",     name:"Repair bench",      scan:"any",       verdict:false,
+    prompt:"Scan a driver that failed, to record what was found and done"}
 ];
 
 var FAIL_CODES = {
@@ -1146,7 +1217,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-2115";
+var BUILD_ID = "2026-10-13-2320";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -1328,6 +1399,7 @@ function idle(){
   var msg = station.key === "PACKING"
           ? ("Scan " + db.settings.boxQuantity + " finished drivers for one master packing box")
           : station.prompt ? station.prompt
+          : station.scan === "any"  ? "Scan the board code or the enclosure code"
           : station.scan === "dual" ? "Scan the board code, then the enclosure code"
           : station.scan === "board" ? "Scan the board code" : "Scan the enclosure code";
   banner("idle", msg, "");
@@ -1393,11 +1465,14 @@ function handleScanNow(raw){
   if(station.key === "AGEING_OUT") return scanAgeingOut(c);
   if(station.key === "FINAL")      return scanFinal(c);
   if(station.key === "PACKING")    return scanPacking(c);
+  if(station.key === "REPAIR")     return scanRepair(c);
 }
 
 function scanMI(c){
   if(c.kind !== "board") return reject("Wrong code at this station", "MI Line needs the board code (" + boardLabel() + ").");
   var u = db.units[c.serial];
+  if(u && u.status === "SCRAP") return reject("This code was scrapped",
+    c.serial + " was scrapped at the repair bench and cannot be used again. Use a new code.");
   if(u && u.miLine) return reject("Already recorded at MI Line", c.serial + " was scanned at " + hhmm(u.miLine.at) + ". Send it to PCBA testing.");
   if(!u) u = db.units[c.serial] = blankUnit(c.serial);
   u.miLine = {at:now(), operator:operator};
@@ -1410,9 +1485,9 @@ function scanPCBA(c){
   if(c.kind !== "board") return reject("Wrong code at this station", "PCBA testing needs the board code (" + boardLabel() + ").");
   var u = db.units[c.serial];
   if(!u || !u.miLine) return reject("MI Line not completed", c.serial + " must be scanned at MI Line before PCBA testing.");
+  if(reworkGate(u, c.serial)) return;
   if(u && u.stage1 && u.stage1.verdict === "PASS") return reject("Already passed PCBA", c.serial + " passed at " + hhmm(u.stage1.at) + ". Send it to hi-pot.");
-  if(u && u.status === "SCRAP") return reject("Unit is scrapped", c.serial + " was scrapped and cannot be reused.");
-  pending = {board:c.serial, retest: !!(u && u.stage1)};
+  pending = {board:c.serial, retest: !!(u && u.stage1) || !!u.repairCount};
   waiting(pending.retest ? "Retest — record the result" : "Board ready — record the result", c.serial);
   maybeStartCapture();
 }
@@ -1426,6 +1501,7 @@ function scanHipot(c){
   if(c.kind === "board"){
     var u = db.units[c.serial];
     if(!u) return reject("Unknown board", c.serial + " was never recorded at PCBA testing.");
+    if(reworkGate(u, c.serial)) return;
     if(!u.stage1 || u.stage1.verdict !== "PASS") return reject("PCBA not passed", c.serial + " has not passed PCBA testing. Gate blocked.");
     if(u.enclosure && !halfPair){
       pending = {board:c.serial, enclosure:u.enclosure};
@@ -1438,6 +1514,7 @@ function scanHipot(c){
     return waiting("Board accepted — now scan the enclosure", c.serial);
   }
   var owner = db.encIndex[c.serial];
+  if(owner && reworkGate(db.units[owner], c.serial)){ halfPair = null; clearTimeout(pairTimer); return; }
   if(owner && (!halfPair || halfPair.serial !== owner)){
     if(halfPair) return failPair("Enclosure already used", c.serial + " is already paired to " + owner + ".");
     pending = {board:owner, enclosure:c.serial};
@@ -1528,6 +1605,7 @@ function scanAgeingIn(c){
   if(c.kind !== "enclosure") return reject("Wrong code at this station", "Ageing needs the enclosure code (" + enclLabel() + ").");
   var r = resolveEnc(c.serial); if(!r) return;
   var u = r.unit;
+  if(reworkGate(u, c.serial)) return;
   if(!u.stage2 || u.stage2.verdict !== "PASS") return reject("Hi-pot not passed", c.serial + " has not passed hi-pot testing. Gate blocked.");
   if(u.ageingIn && !u.ageingOut) return reject("Already in the chamber", c.serial + " was loaded at " + hhmm(u.ageingIn) + ".");
   if(u.ageingOut) return reject("Ageing already complete", c.serial + " finished ageing at " + hhmm(u.ageingOut) + ". Send it to final testing.");
@@ -1556,21 +1634,36 @@ function scanAgeingOut(c){
   waiting("Out after " + mins.toFixed(1) + " min — record the result", r.board + " · " + c.serial);
 }
 
-function scanFinal(c){
-  if(c.kind !== "enclosure") return reject("Wrong code at this station", "Final testing needs the enclosure code (" + enclLabel() + ").");
-  var r = resolveEnc(c.serial); if(!r) return;
+/* The gate every driver must pass to be tested, whether the verdict is typed
+   in at the bench or imported from the tester file afterwards. */
+function finalGate(c){
+  if(c.kind !== "enclosure"){ reject("Wrong code at this station", "Final testing needs the enclosure code (" + enclLabel() + ")."); return null; }
+  var r = resolveEnc(c.serial); if(!r) return null;
   var u = r.unit;
-  if(!u.ageingIn) return reject("Ageing not started", c.serial + " has no ageing record. Gate blocked.");
+  if(reworkGate(u, c.serial)) return null;
+  if(!u.ageingIn){ reject("Ageing not started", c.serial + " has no ageing record. Gate blocked."); return null; }
   if(!u.ageingOut){
     var mins = (Date.now() - new Date(u.ageingIn).getTime()) / 60000;
     var left = Math.max(0, Math.ceil(ageingMinsForUnit(u) - mins));
-    return reject("Still in the chamber", left > 0 ? (left + " more minute" + (left === 1 ? "" : "s") + " required, then unload at station 3b.") : "Unload at station 3b first.");
+    reject("Still in the chamber", left > 0 ? (left + " more minute" + (left === 1 ? "" : "s") + " required, then unload at station 3b.") : "Unload at station 3b first.");
+    return null;
   }
-  if(u.ageingResult && u.ageingResult.verdict !== "PASS") return reject("Failed at ageing",
-    c.serial + " failed ageing" + (u.ageingResult.failCode ? " (" + u.ageingResult.failCode + ")" : "") + ". Send to rework.");
-  if(u.stage4 && u.stage4.verdict === "PASS") return reject("Already passed final test", c.serial + " passed at " + hhmm(u.stage4.at) + ".");
-  pending = {board:r.board, enclosure:c.serial, retest: !!u.stage4};
-  waiting(pending.retest ? "Retest — record the result" : "Ready — record the result", r.board + " · " + c.serial);
+  if(u.ageingResult && u.ageingResult.verdict !== "PASS"){
+    reject("Failed at ageing", c.serial + " failed ageing"
+      + (u.ageingResult.failCode ? " (" + u.ageingResult.failCode + ")" : "") + ". Send to rework.");
+    return null;
+  }
+  if(u.stage4 && u.stage4.verdict === "PASS"){
+    reject("Already passed final test", c.serial + " passed at " + hhmm(u.stage4.at) + "."); return null;
+  }
+  return {board:r.board, enclosure:c.serial, retest: !!u.stage4};
+}
+
+function scanFinal(c){
+  if(ftOn()) return ftScan(c);
+  var g = finalGate(c); if(!g) return;
+  pending = g;
+  waiting(pending.retest ? "Retest — record the result" : "Ready — record the result", g.board + " · " + c.serial);
   maybeStartCapture();
 }
 
@@ -1827,6 +1920,7 @@ function recordVerdict(verdict, failCode){
   }
   if(pending.enclosure) u.enclosure = pending.enclosure;
   if(pending.retest) u.retests = (u.retests || 0) + 1;
+  if(verdict === "FAIL") logRejection(u, entry, station.key, station.name, failCode);
   u.status = verdict === "FAIL" ? "REWORK" : (station.key === "FINAL" ? "PASS" : "in_progress");
   u.history.push({at:now(), station:station.key, operator:operator,
     event: verdict + (failCode ? " · " + failCode : ""), detail: pending.enclosure || pending.board});
@@ -1928,6 +2022,469 @@ function stamp(){
     + "-" + p(d.getHours()) + "-" + p(d.getMinutes());
 }
 
+/* ---------- CCSERVO multi-position driver tester (Final Testing) ----------
+   The tester grades each driver against its own recipe limits, but it records
+   results by fixture position (1#..8#) and knows nothing about serial numbers.
+   It writes one tab-separated UTF-16 file per day to a USB stick. So the
+   operator scans each driver into its position and locks the set before
+   pressing start; the lock time is written onto each unit, which is what lets
+   the file be imported later, from any terminal, and still land on the right
+   drivers. Nothing is ever guessed: a row whose position was not scanned is
+   reported, not assigned. */
+var FT_SLOTS = 8;
+var FT = {on:false, offset:0, cursor:1, slots:{}};
+
+/* Tester column -> the same measurement codes the DTM-1 uses, so the limits
+   engine, the stage sheets and the reports need no special case. */
+var FT_FIELDS = [
+  ["no load voltage 1(v-)", "VNL",  "V", "No-load voltage"],
+  ["no load voltage 2(v-)", "VNL2", "V", "No-load voltage 2"],
+  ["intput voltage(v~)",    "VAC",  "V", "AC voltage"],
+  ["input voltage(v~)",     "VAC",  "V", "AC voltage"],
+  ["input current(a~)",     "IAC",  "A", "AC current"],
+  ["input power(w~)",       "PAC",  "W", "AC power"],
+  ["power factor",          "PF",   "",  "Power factor"],
+  ["harmonic current(%)",   "ATHD", "%", "Current THD"],
+  ["output voltage 1(v-)",  "VDC",  "V", "DC voltage"],
+  ["output voltage 2(v-)",  "VDC2", "V", "DC voltage 2"],
+  ["output current 1(a-)",  "IDC",  "A", "DC current"],
+  ["output current 2(a-)",  "IDC2", "A", "DC current 2"],
+  ["output power 1(w-)",    "PDC",  "W", "DC power"],
+  ["output power 2(w-)",    "PDC2", "W", "DC power 2"],
+  ["efficiency",            "EFF",  "%", "Efficiency"]
+];
+
+function ftLoad(){
+  try{
+    var s = JSON.parse(localStorage.getItem("ronch_ft") || "{}");
+    FT.on = !!s.on; FT.offset = Number(s.offset) || 0;
+  }catch(e){}
+  FT.slots = {}; FT.cursor = 1;
+}
+function ftStore(){
+  try{ localStorage.setItem("ronch_ft", JSON.stringify({on:FT.on, offset:FT.offset})); }catch(e){}
+}
+function ftOn(){ return FT.on && station && station.key === "FINAL"; }
+function ftToggle(v){ FT.on = !!v; ftStore(); renderFt(); }
+function ftSetOffset(v){ FT.offset = Number(v) || 0; ftStore(); }
+function ftSay(msg){ var b = el("ftResult"); if(b) b.textContent = msg; }
+
+function ftSlotName(i){ return (i <= 4 ? "Left " : "Right ") + ((i - 1) % 4 + 1); }
+function ftNextEmpty(from){
+  var i;
+  for(i = from + 1; i <= FT_SLOTS; i++) if(!FT.slots[i]) return i;
+  for(i = 1; i <= FT_SLOTS; i++) if(!FT.slots[i]) return i;
+  return 0;
+}
+function ftWaiting(){
+  var n = 0;
+  allUnits().forEach(function(u){ if(u.ftPending) n++; });
+  return n;
+}
+function ftHEsc(s){
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function renderFt(){
+  var row = el("ftRow"); if(!row) return;
+  if(!FT.loaded){ FT.loaded = true; ftLoad(); }
+  if(!station || station.key !== "FINAL"){ row.classList.add("hide"); return; }
+  row.classList.remove("hide");
+  el("ftUse").checked = FT.on;
+  el("ftOffset").value = String(FT.offset);
+  el("ftBody").classList.toggle("hide", !FT.on);
+  var html = "";
+  for(var i = 1; i <= FT_SLOTS; i++){
+    var s = FT.slots[i], here = (FT.cursor === i);
+    html += '<div onclick="ftPick(' + i + ')" title="Click to load here, or to clear this position"'
+      + ' style="cursor:pointer;min-width:152px;padding:8px 11px;border-radius:6px;background:var(--bg);border:'
+      + (s ? '2px solid var(--ok)' : (here ? '2px solid var(--wait)' : '1px solid var(--line)')) + '">'
+      + '<div style="font-size:11px;color:var(--dim)">' + ftSlotName(i) + ' &nbsp;' + i + '#'
+      + (here && !s ? ' &nbsp;&larr; next' : '') + '</div>'
+      + '<div class="mono" style="font-size:13px;margin-top:2px">' + (s ? ftHEsc(s) : "&mdash;") + '</div></div>';
+  }
+  el("ftSlots").innerHTML = html;
+  var w = ftWaiting();
+  el("ftNote").textContent = w
+    ? (w + " driver" + (w === 1 ? "" : "s") + " awaiting tester results")
+    : "No drivers awaiting tester results.";
+}
+
+function ftPick(i){
+  if(FT.slots[i]) delete FT.slots[i];
+  FT.cursor = i;
+  renderFt();
+}
+function ftClear(){ FT.slots = {}; FT.cursor = 1; renderFt(); ftSay(""); }
+
+/* A scan at Final Testing while the fixture is in use. Same gate as a normal
+   final-test scan, so an unaged or already-passed driver still cannot get in. */
+function ftScan(c){
+  if(!FT.cursor) return reject("Fixture full", "Lock the set, or click a position to clear it.");
+  var g = finalGate(c); if(!g) return;
+  for(var p in FT.slots){
+    if(FT.slots[p] === c.serial) return reject("Already in the fixture", c.serial + " is in position " + p + "#.");
+  }
+  var slot = FT.cursor;
+  FT.slots[slot] = c.serial;
+  FT.cursor = ftNextEmpty(slot);
+  renderFt();
+  accept("Position " + slot + "# loaded",
+    c.serial + (FT.cursor ? "  ·  next is " + FT.cursor + "#" : "  ·  fixture full — lock the set"));
+}
+
+function ftLock(){
+  var pos = Object.keys(FT.slots).map(Number).sort(function(a,b){ return a - b; });
+  if(!pos.length) return reject("Nothing scanned", "Scan each driver into its fixture position first.");
+  var at = now(), done = 0;
+  pos.forEach(function(p){
+    var enc = FT.slots[p], r = resolveEnc(enc);
+    if(!r) return;
+    r.unit.ftPending = {at:at, position:p, operator:operator, enclosure:enc};
+    r.unit.history.push({at:at, station:"FINAL", operator:operator,
+      event:"Loaded to tester position " + p + "#", detail:enc});
+    done++;
+  });
+  save();
+  FT.slots = {}; FT.cursor = 1; renderFt();
+  accept("Set locked · " + done + " position" + (done === 1 ? "" : "s"),
+    "Press start on the tester. Import the file when the batch is finished.");
+}
+
+/* ---- reading the tester's own export ---- */
+function ftDecode(buf){
+  var b = new Uint8Array(buf);
+  if(b.length > 1 && b[0] === 0xFF && b[1] === 0xFE) return new TextDecoder("utf-16le").decode(b.subarray(2));
+  if(b.length > 1 && b[0] === 0xFE && b[1] === 0xFF) return new TextDecoder("utf-16be").decode(b.subarray(2));
+  return new TextDecoder("utf-8").decode(b).replace(/^﻿/, "");
+}
+/* The file is named for its day (2026-10-13.csv). That is more trustworthy
+   than the row's own yy/mm/dd, which depends on how the tester is configured,
+   so the file name wins when the two disagree. */
+function ftFileDay(name){
+  var m = /(20\d{2})[-_.]?(\d{2})[-_.]?(\d{2})/.exec(String(name || ""));
+  return m ? {y:+m[1], mo:+m[2], d:+m[3]} : null;
+}
+function ftWhen(dateText, timeText, day){
+  var t = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(timeText || "");
+  if(!t) return null;
+  var y, mo, d;
+  if(day){ y = day.y; mo = day.mo; d = day.d; }
+  else {
+    var m = /^(\d{2,4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/.exec(dateText || "");
+    if(!m) return null;
+    y = +m[1]; if(y < 100) y += 2000;
+    mo = +m[2]; d = +m[3];
+  }
+  return new Date(y, mo - 1, d, +t[1] || 0, +t[2] || 0, +t[3] || 0).getTime();
+}
+
+function ftParse(text, fileName){
+  var lines = text.split(/\r\n|\n|\r/).filter(function(l){ return l.trim() !== ""; });
+  if(lines.length < 2) return {error:"The file has no result rows."};
+  var sep = (lines[0].split("\t").length >= lines[0].split(",").length) ? "\t" : ",";
+  var head = lines[0].split(sep).map(function(h){ return h.replace(/^﻿/, "").trim(); });
+  var lead = {}, blocks = {};
+  head.forEach(function(h, i){
+    var m = /^(\d+)#\s*(.+)$/.exec(h);
+    if(m){ var p = +m[1]; (blocks[p] = blocks[p] || {})[m[2].trim().toLowerCase()] = i; }
+    else if(h) lead[h.toLowerCase()] = i;
+  });
+  var positions = Object.keys(blocks).map(Number).sort(function(a,b){ return a - b; });
+  if(!positions.length)
+    return {error:"No test-position columns (1#, 2# …) in this file. Is it the tester's own export?"};
+  var day = ftFileDay(fileName), rows = [];
+  for(var li = 1; li < lines.length; li++){
+    var c = lines[li].split(sep).map(function(x){ return x.trim(); });
+    var get = function(i){ return (i === undefined || i >= c.length) ? "" : c[i]; };
+    var dText = get(lead["date"]), tText = get(lead["time"]);
+    var at = ftWhen(dText, tText, day);
+    /* eslint-disable no-loop-func */
+    positions.forEach(function(p){
+      var f = blocks[p], res = get(f["test results"]);
+      if(!res) return;
+      var ms = [], seen = {};
+      FT_FIELDS.forEach(function(d){
+        var i = f[d[0]];
+        if(i === undefined || seen[d[1]]) return;
+        var raw = get(i);
+        if(raw === "" || isNaN(Number(raw))) return;
+        seen[d[1]] = 1;
+        ms.push({code:d[1], label:d[3], unit:d[2], value:Number(raw)});
+      });
+      rows.push({cycle:get(lead["no."]), at:at,
+                 atText:(day ? (day.y + "-" + ("0"+day.mo).slice(-2) + "-" + ("0"+day.d).slice(-2)) : dText) + " " + tText,
+                 product:get(lead["product no."]).trim(), position:p,
+                 verdict:(/^(ok|pass|good)$/i.test(res) ? "PASS" : "FAIL"), raw:res, measurements:ms});
+    });
+  }
+  if(!rows.length) return {error:"No rows in this file carry a test result."};
+  return {rows:rows, positions:positions};
+}
+
+/* Units locked into the fixture, grouped by the moment they were locked. */
+function ftSets(){
+  var by = {};
+  allUnits().forEach(function(u){
+    if(u.ftPending && u.ftPending.at && u.ftPending.position)
+      (by[u.ftPending.at] = by[u.ftPending.at] || []).push(u);
+  });
+  return Object.keys(by).sort().map(function(k){ return {at:new Date(k).getTime(), units:by[k]}; });
+}
+/* Results already on record, so the same daily file can be imported as often
+   as the operator likes without doubling anything up. */
+function ftAlready(){
+  var ix = {};
+  allUnits().forEach(function(u){
+    if(u.stage4 && u.stage4.testerAt) ix[u.stage4.testerAt + "|" + u.stage4.testerPosition] = u.board;
+  });
+  return ix;
+}
+
+function ftImport(file){
+  if(!file) return;
+  var inp = el("ftFile"); if(inp) inp.value = "";
+  ftSay("Reading " + file.name + " …");
+  var rd = new FileReader();
+  rd.onerror = function(){ ftSay("Could not read " + file.name + "."); };
+  rd.onload = function(){
+    var parsed;
+    try{ parsed = ftParse(ftDecode(rd.result), file.name); }
+    catch(e){ return ftSay("Could not read " + file.name + ": " + ((e && e.message) || e)); }
+    if(parsed.error) return ftSay(parsed.error);
+    ftApply(parsed, file.name);
+  };
+  rd.readAsArrayBuffer(file);
+}
+
+function ftApply(parsed, fileName){
+  var sets = ftSets(), seen = ftAlready(), off = (Number(FT.offset) || 0) * 60000;
+  var applied = 0, failed = 0, dup = 0, noSet = [], noSlot = [], badTime = 0, touched = false;
+  parsed.rows.forEach(function(r){
+    if(r.at === null){ badTime++; return; }
+    var stamp = new Date(r.at).toISOString();
+    if(seen[stamp + "|" + r.position]){ dup++; return; }
+    var t = r.at + off, set = null;
+    for(var i = 0; i < sets.length; i++) if(sets[i].at <= t + 120000) set = sets[i];
+    if(!set){ noSet.push(r.atText + "  " + r.position + "#"); return; }
+    var u = null;
+    set.units.forEach(function(x){ if(x.ftPending && x.ftPending.position === r.position) u = x; });
+    if(!u){ noSlot.push(r.atText + "  " + r.position + "#"); return; }
+
+    var entry = {verdict:r.verdict, at:stamp, station:"FINAL",
+                 operator:(u.ftPending.operator || operator || ""),
+                 failCode:(r.verdict === "FAIL" ? "TESTER-NG" : null),
+                 measurements:r.measurements, machineStatus:r.verdict,
+                 source:"tester file", testerAt:stamp, testerPosition:r.position,
+                 testerCycle:r.cycle, testerProduct:r.product, testerFile:fileName,
+                 raw:(r.position + "# " + r.raw)};
+    applyLimits(entry, classify(u.board).partCode, "FINAL");
+    entry.outOfLimits = (entry.failing || []).join(" ");
+    if(u.stage4) u.retests = (u.retests || 0) + 1;
+    u.stage4 = entry;
+    if(r.verdict === "FAIL") logRejection(u, entry, "FINAL", "Final testing", entry.failCode);
+    u.status = r.verdict === "FAIL" ? "REWORK" : "PASS";
+    u.history.push({at:now(), station:"FINAL", operator:operator,
+      event:"Tester result imported · " + r.verdict + " (" + r.position + "#)",
+      detail:fileName + " · " + r.atText});
+    u.ftPending = null;
+    seen[stamp + "|" + r.position] = u.board;
+    touched = true;
+    applied++; if(r.verdict === "FAIL") failed++;
+  });
+  if(touched) save();
+  renderFt();
+  if(typeof renderAll === "function") renderAll();
+  else if(typeof render === "function") render();
+
+  var out = [];
+  out.push(applied + " result" + (applied === 1 ? "" : "s") + " recorded"
+           + (failed ? "  ·  " + failed + " FAIL" : "") + "  (from " + parsed.rows.length
+           + " in " + fileName + ")");
+  if(dup) out.push(dup + " already on record — skipped.");
+  if(badTime) out.push(badTime + " row(s) had no readable date or time.");
+  /* Both misses mean the same thing to the operator — no driver was on record
+     in that position when the tester ran it — so they are reported together
+     rather than as two cryptic categories. Nothing is ever guessed. */
+  var missed = noSet.concat(noSlot).sort();
+  if(missed.length){
+    out.push("Not assigned — no driver was scanned into these positions before the test:\n   "
+             + missed.slice(0, 10).join("\n   ")
+             + (missed.length > 10 ? "\n   …and " + (missed.length - 10) + " more" : ""));
+    out.push(FT.offset
+      ? "Check the tester's clock offset, then scan the set again and re-run the batch if needed."
+      : "If the tester's clock is ahead of or behind this PC, set the offset above and import again.");
+  }
+  ftSay(out.join("\n"));
+  if(applied) accept("Tester file imported", applied + " result" + (applied === 1 ? "" : "s") + " recorded"
+                     + (failed ? " · " + failed + " failed" : ""));
+  else beep("wait");
+}
+
+/* ---------- repair bench ----------
+   A failed driver is not simply re-tested: it comes here first, the fault and
+   the fix are recorded against it, and only then does it go back to PCBA and
+   repeat every stage. Two permanent logs come out of this — u.rejections, one
+   entry per failure, and u.repairs, one per visit to the bench — and because
+   both live outside the stage slots they survive the reset that sending a
+   driver back to PCBA performs. That is what the rejection analysis reads. */
+var DEFECT_CODES = [
+  "DRY / COLD SOLDER JOINT","SOLDER BRIDGE / SHORT","COMPONENT MISSING","WRONG COMPONENT",
+  "COMPONENT REVERSED","COMPONENT DAMAGED","MOSFET FAILED","CONTROL IC FAILED",
+  "DIODE FAILED","CAPACITOR FAILED","RESISTOR OPEN / DRIFTED","TRANSFORMER FAULT",
+  "INDUCTOR FAULT","OPTOCOUPLER FAULT","PCB TRACK DAMAGE","LOOSE WIRE / CONNECTOR",
+  "WIRE POLARITY WRONG","INSULATION DAMAGE","POOR EARTH BONDING","ASSEMBLY / POTTING FAULT",
+  "NO FAULT FOUND","OTHER"
+];
+var REPAIR_ACTIONS = [
+  "Component replaced","Joint resoldered","Track repaired","Wire / connector replaced",
+  "Re-assembled","Cleaned","Setting corrected","Retest only — no fault found","Other"
+];
+var SCRAP_REASONS = [
+  "Beyond economic repair","PCB damaged","Transformer failed","Failed again after repair",
+  "Burnt / fire damage","Wrong build — cannot rework","Engineering instruction","Other"
+];
+var repUnit = null;
+
+function lastRejection(u){
+  var r = (u && u.rejections) || [];
+  return r.length ? r[r.length - 1] : null;
+}
+function logRejection(u, entry, stKey, stName, failCode){
+  (u.rejections = u.rejections || []).push({
+    at: entry.at || now(), station: stKey, stage: stName,
+    failCode: failCode || entry.failCode || "", operator: entry.operator || operator || "",
+    part: u.part || (classify(u.board).partCode || ""), enclosure: u.enclosure || "",
+    attempt: (u.retests || 0) + 1, repairsBefore: u.repairCount || 0,
+    measurements: entry.measurements || null, outOfLimits: entry.outOfLimits || "",
+    limitVerdict: entry.limitVerdict || "", machineStatus: entry.machineStatus || "",
+    failingStep: entry.failingStep || ""});
+}
+
+/* Used by every testing station: a driver that has failed cannot be tested
+   again until the repair bench has had it. */
+function reworkGate(u, serial){
+  if(!u) return false;
+  if(u.status === "SCRAP"){
+    reject("Driver is scrapped", serial + " was scrapped and cannot be used again.");
+    return true;
+  }
+  if(u.status === "REWORK"){
+    var r = lastRejection(u);
+    reject("Send it to the repair bench",
+      serial + " failed" + (r ? " at " + r.stage + (r.failCode ? "  ·  " + r.failCode : "") : "")
+      + ". The repair has to be recorded before it can be tested again.");
+    return true;
+  }
+  return false;
+}
+
+function fillSelect(id, list){
+  var s = el(id); if(!s) return;
+  s.innerHTML = list.map(function(x){ return '<option>' + repHEsc(x) + '</option>'; }).join("");
+}
+function repHEsc(s){
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function scanRepair(c){
+  var board = null;
+  if(c.kind === "board") board = c.serial;
+  else {
+    board = db.encIndex[c.serial];
+    if(!board) return reject("Not paired to a board", c.serial + " has never been paired at hi-pot, so there is no record to repair.");
+  }
+  var u = db.units[board];
+  if(!u) return reject("Not on record", board + " is not in the system.");
+  if(u.status === "SCRAP") return reject("Already scrapped", board + " was scrapped and cannot be repaired.");
+  if(u.status === "REPAIRED") return reject("Repair already recorded",
+    board + " was repaired at " + hhmm((u.repairs || []).slice(-1)[0].at) + ". Send it to PCBA testing.");
+  if(u.status !== "REWORK") return reject("Nothing to repair",
+    board + " has not failed a test. Only failed drivers come to the repair bench.");
+  repUnit = {board:board, enclosure:u.enclosure || null};
+  showRepair(u);
+}
+
+function showRepair(u){
+  var r = lastRejection(u);
+  fillSelect("repDefect", DEFECT_CODES);
+  fillSelect("repAction", REPAIR_ACTIONS);
+  fillSelect("repScrap",  SCRAP_REASONS);
+  el("repParts").value = ""; el("repNote").value = "";
+  el("repHead").innerHTML = '<span class="mono">' + repHEsc(u.board) + '</span>'
+    + (u.enclosure ? '  ·  <span class="mono">' + repHEsc(u.enclosure) + '</span>' : "")
+    + '  ·  ' + repHEsc(modelOf(variantOf(u)) || variantOf(u));
+  var lines = [];
+  if(r){
+    lines.push("Failed at " + r.stage + (r.failCode ? "  ·  " + r.failCode : "") + "  ·  " + hhmm(r.at)
+               + (r.operator ? "  ·  " + r.operator : ""));
+    if(r.outOfLimits) lines.push("Out of limits: " + r.outOfLimits);
+    if(r.failingStep) lines.push("Failing step: " + r.failingStep);
+    (r.measurements || []).forEach(function(m){
+      if(m.ok === false) lines.push("   " + m.code + " = " + m.value + (m.unit || "")
+        + "   limit " + (m.lo === null || m.lo === undefined ? "—" : m.lo) + " to "
+        + (m.hi === null || m.hi === undefined ? "—" : m.hi));
+    });
+  }
+  if(u.repairCount) lines.push("Repaired before: " + u.repairCount + " time" + (u.repairCount === 1 ? "" : "s"));
+  if((u.rejections || []).length > 1)
+    lines.push("Total rejections on this driver: " + u.rejections.length);
+  el("repHist").textContent = lines.join("\n");
+  show("repRow"); hide("verdictRow"); hide("failRow");
+  waiting("Record the repair", u.board + (u.enclosure ? "  ·  " + u.enclosure : ""));
+}
+
+function repClose(){ hide("repRow"); repUnit = null; resetScanBuffer(); focusScan(); }
+function repCancel(){ repClose(); banner("wait","Repair not recorded","Scan the driver again when you are ready."); }
+
+function repRecord(outcome){
+  var u = repUnit && db.units[repUnit.board];
+  if(!u) return repClose();
+  var r = lastRejection(u), board = u.board;
+  var rec = {at:now(), operator:operator || "", outcome:outcome,
+             defect:el("repDefect").value, action:el("repAction").value,
+             parts:el("repParts").value.trim(), note:el("repNote").value.trim(),
+             failedStation:r ? r.station : "", failedStage:r ? r.stage : "",
+             failCode:r ? r.failCode : "", failedAt:r ? r.at : "",
+             outOfLimits:r ? r.outOfLimits : "",
+             attempt:(u.repairCount || 0) + 1};
+  if(outcome === "SCRAP") rec.scrapReason = el("repScrap").value;
+  (u.repairs = u.repairs || []).push(rec);
+  u.repairCount = (u.repairCount || 0) + 1;
+
+  if(outcome === "SCRAP"){
+    u.status = "SCRAP";
+    u.history.push({at:now(), station:"REPAIR", operator:operator,
+      event:"Scrapped · " + rec.scrapReason, detail:rec.defect});
+    save(); repClose();
+    beep("bad");
+    banner("bad","Scrapped", board + " · " + rec.scrapReason + " — remove it from the line");
+    render();
+    return;
+  }
+  /* Back to the start of testing: every stage result is cleared so the driver
+     has to earn them again. The enclosure pairing stays, so hi-pot picks it
+     straight back up. */
+  u.stage1 = null; u.stage2 = null; u.ageingIn = null; u.ageingOut = null;
+  u.ageingResult = null; u.stage4 = null; u.ftPending = null;
+  u.status = "REPAIRED";
+  u.history.push({at:now(), station:"REPAIR", operator:operator,
+    event:"Repaired · " + rec.defect,
+    detail:rec.action + (rec.parts ? "  ·  " + rec.parts : "") + (rec.note ? "  ·  " + rec.note : "")});
+  save(); repClose();
+  accept("Repair recorded", board + " · send it to PCBA testing");
+}
+function repDone(){ repRecord("REPAIRED"); }
+function repScrapUnit(){
+  if(!repUnit) return;
+  if(!confirm("Scrap " + repUnit.board + "?\n\nThe driver is retired and its codes cannot be used again."))
+    return;
+  repRecord("SCRAP");
+}
+
+
 /* ---- table builders ---- */
 function stageTable(key){
   var t = [];
@@ -1982,12 +2539,69 @@ function stageTable(key){
     });
   }
   if(key === "FINAL"){
-    t.push(["board","enclosure"].concat(VARIANT_HEADS).concat(["verdict","tested_at","operator","fail_code","status"]));
+    var fc = [], fu = {};
+    allUnits().forEach(function(u){
+      ((u.stage4 && u.stage4.measurements) || []).forEach(function(m){
+        if(fc.indexOf(m.code) < 0) fc.push(m.code);
+        if(m.unit) fu[m.code] = m.unit;
+      });
+    });
+    fc.sort();
+    t.push(["board","enclosure"].concat(VARIANT_HEADS)
+      .concat(["verdict","limit_verdict","tester_verdict","agree","out_of_limits",
+               "tested_at","operator","fail_code","status","tester_position","tester_source"])
+      .concat(fc.map(function(cd){ return fu[cd] ? cd + " (" + fu[cd] + ")" : cd; })));
     unitsByVariant().forEach(function(u){
       if(!u.stage4) return;
+      var by = {}; (u.stage4.measurements || []).forEach(function(m){ by[m.code] = m.value; });
+      var lv = u.stage4.limitVerdict || "", mv = u.stage4.machineStatus || "", ref = lv || mv;
       t.push([u.board, u.enclosure || ""].concat(variantCols(u))
-        .concat([u.stage4.verdict, u.stage4.at, u.stage4.operator, u.stage4.failCode || "", u.status]));
+        .concat([u.stage4.verdict, lv, mv, ref ? (ref === u.stage4.verdict ? "yes" : "NO") : "",
+                 u.stage4.outOfLimits || "", u.stage4.at, u.stage4.operator,
+                 u.stage4.failCode || "", u.status,
+                 u.stage4.testerPosition ? (u.stage4.testerPosition + "#") : "",
+                 u.stage4.testerFile || u.stage4.source || ""])
+        .concat(fc.map(function(cd){ return by[cd] === undefined ? "" : by[cd]; })));
     });
+  }
+  if(key === "REJECT"){
+    t.push(["timestamp","board","enclosure"].concat(VARIANT_HEADS)
+      .concat(["stage","fail_code","out_of_limits","attempt","repairs_before","operator",
+               "limit_verdict","instrument_verdict","failing_step"]));
+    var jrows = [];
+    allUnits().forEach(function(u){
+      (u.rejections || []).forEach(function(r){
+        jrows.push([r.at, u.board, r.enclosure || u.enclosure || ""].concat(variantCols(u))
+          .concat([r.stage || r.station || "", r.failCode || "", r.outOfLimits || "",
+                   r.attempt || "", r.repairsBefore || 0, r.operator || "",
+                   r.limitVerdict || "", r.machineStatus || "", r.failingStep || ""]));
+      });
+    });
+    jrows.sort(function(a, b){ return a[0] < b[0] ? -1 : 1; });
+    jrows.forEach(function(r){ t.push(r); });
+  }
+  if(key === "REPAIR"){
+    t.push(["repaired_at","board","enclosure"].concat(VARIANT_HEADS)
+      .concat(["failed_stage","fail_code","failed_at","hours_to_repair","defect_found",
+               "action_taken","components_replaced","outcome","scrap_reason","note",
+               "operator","repair_no"]));
+    var prows = [];
+    allUnits().forEach(function(u){
+      (u.repairs || []).forEach(function(r){
+        var hrs = "";
+        if(r.failedAt){
+          var d = (new Date(r.at).getTime() - new Date(r.failedAt).getTime()) / 3600000;
+          if(isFinite(d)) hrs = d.toFixed(2);
+        }
+        prows.push([r.at, u.board, u.enclosure || ""].concat(variantCols(u))
+          .concat([r.failedStage || r.failedStation || "", r.failCode || "", r.failedAt || "",
+                   hrs, r.defect || "", r.action || "", r.parts || "",
+                   r.outcome === "SCRAP" ? "SCRAPPED" : "REPAIRED", r.scrapReason || "",
+                   r.note || "", r.operator || "", r.attempt || ""]));
+      });
+    });
+    prows.sort(function(a, b){ return a[0] < b[0] ? -1 : 1; });
+    prows.forEach(function(r){ t.push(r); });
   }
   if(key === "PACKING"){
     t.push(["master_box","created_at","operator","quantity","driver_codes"]);
@@ -2010,7 +2624,8 @@ function logTable(){
 /* ---- export actions ---- */
 function exportCsv(){ saveCsv("all-stages", rows()); }
 function exportStage(key){
-  saveCsv({MI:"mi-line", PCBA:"pcba", HIPOT:"hipot", AGEING:"ageing", FINAL:"final", PACKING:"packing"}[key], stageTable(key));
+  saveCsv({MI:"mi-line", PCBA:"pcba", HIPOT:"hipot", AGEING:"ageing", FINAL:"final",
+           PACKING:"packing", REJECT:"rejections", REPAIR:"repairs"}[key], stageTable(key));
 }
 function exportLog(){ saveCsv("event-log", logTable()); }
 
@@ -3843,7 +4458,7 @@ function reportSheets(units){
     [22,22,15,9,11,21,12,15,21,15,21,21,21,15,21,24,21,15,9], U,
     function(u){
       return [L(u.board), L(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
-        C(u.status === "PASS" ? "PACKED" : u.status),
+        C(u.packing ? "PACKED" : (u.status === "PASS" ? "PASSED" : u.status)),
         D(u.miLine && u.miLine.at), C(u.miLine ? u.miLine.operator : ""),
         verdictCell(u.stage1 && u.stage1.verdict), D(u.stage1 && u.stage1.at),
         verdictCell(u.stage2 && u.stage2.verdict), D(u.stage2 && u.stage2.at),
@@ -3913,13 +4528,32 @@ function reportSheets(units){
         C(u.ageingResult ? (u.ageingResult.failCode || "") : "")];
     });
 
+  var fCodes = [], fUnits = {};
+  U.forEach(function(u){
+    ((u.stage4 && u.stage4.measurements) || []).forEach(function(m){
+      if(fCodes.indexOf(m.code) < 0) fCodes.push(m.code);
+      if(m.unit) fUnits[m.code] = m.unit;
+    });
+  });
+  fCodes.sort();
   var fin = stageSheet("STAGE 5 - FINAL TESTING",
-    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code","Status"],
-    [22,22,15,9,10,21,12,18,12], U.filter(function(u){ return u.stage4; }),
-    function(u){ return [L(u.board), L(u.enclosure || ""), C(variantOf(u)),
-      C(modelOf(variantOf(u))), verdictCell(u.stage4.verdict), D(u.stage4.at),
-      C(u.stage4.operator), C(u.stage4.failCode || ""),
-      C(u.status === "PASS" ? "PACKED" : u.status)]; });
+    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Limit Verdict","Tester Verdict","Agree",
+     "Out of Limits","Tested At","Operator","Fail Code","Status","Fixture"]
+      .concat(fCodes.map(function(c){ return fUnits[c] ? c + " (" + fUnits[c] + ")" : c; })),
+    [22,22,15,9,10,13,14,8,20,21,12,18,12,10].concat(fCodes.map(function(){ return 12; })),
+    U.filter(function(u){ return u.stage4; }),
+    function(u){
+      var by = {}; (u.stage4.measurements || []).forEach(function(m){ by[m.code] = m.value; });
+      var lv = u.stage4.limitVerdict || "", mv = u.stage4.machineStatus || "", ref = lv || mv;
+      return [L(u.board), L(u.enclosure || ""), C(variantOf(u)),
+        C(modelOf(variantOf(u))), verdictCell(u.stage4.verdict), C(lv), C(mv),
+        C(ref ? (ref === u.stage4.verdict ? "yes" : "NO") : ""),
+        C(u.stage4.outOfLimits || ""), D(u.stage4.at),
+        C(u.stage4.operator), C(u.stage4.failCode || ""),
+        C(u.packing ? "PACKED" : (u.status === "PASS" ? "PASSED" : u.status)),
+        C(u.stage4.testerPosition ? (u.stage4.testerPosition + "#") : "")]
+        .concat(fCodes.map(function(c){ return C(by[c] === undefined ? "" : by[c]); }));
+    });
 
   // Packing is one row per master box, not per unit
   var inScope = {}; U.forEach(function(u){ if(u.packing) inScope[u.packing.boxId] = 1; });
@@ -3957,8 +4591,56 @@ function reportSheets(units){
              heights: eh.heights, tab: TAB_SUMMARY,
              filter: "A5:G" + Math.max(5, erows.length)};
 
+  /* ---- rejections and repairs ----
+     These two live on the unit outside the stage slots, so sending a repaired
+     driver back to PCBA (which clears every stage result) never erases its
+     failure history. They are the raw material for controlling rejection. */
+  var rj = [];
+  U.forEach(function(u){ (u.rejections || []).forEach(function(r){ rj.push([u, r]); }); });
+  rj.sort(function(a, b){ return a[1].at < b[1].at ? -1 : 1; });
+  var jh = headRows("REJECTION LOG - EVERY FAILURE RECORDED ON THE LINE", scopeLabel(U), rj.length, 14);
+  var jr = jh.rows.concat([[]], [["Timestamp","Board ID","Enclosure ID","Part Code","Model","Stage",
+      "Fail Code","Out of Limits","Attempt","Repairs Before","Operator","Limit Verdict",
+      "Instrument Verdict","Failing Step"].map(H)]);
+  rj.forEach(function(x){
+    var u = x[0], r = x[1], pc = r.part || variantOf(u);
+    jr.push([D(r.at), L(u.board), L(r.enclosure || u.enclosure || ""), C(pc), C(modelOf(pc)),
+      C(r.stage || r.station || ""), {v:r.failCode || "", s:S_BAD}, C(r.outOfLimits || ""),
+      C(r.attempt || ""), C(r.repairsBefore || 0), C(r.operator || ""),
+      C(r.limitVerdict || ""), C(r.machineStatus || ""), C(r.failingStep || "")]);
+  });
+  bandRows(jr, 5);
+  var rejections = {rows:jr, cols:[21,22,22,15,9,20,20,22,9,14,12,13,16,18],
+    merges:jh.merges, freeze:"B6", heights:jh.heights, tab:TAB_STAGE,
+    filter:"A5:N" + Math.max(5, jr.length)};
+
+  var rp = [];
+  U.forEach(function(u){ (u.repairs || []).forEach(function(r){ rp.push([u, r]); }); });
+  rp.sort(function(a, b){ return a[1].at < b[1].at ? -1 : 1; });
+  var ph2 = headRows("REPAIR LOG - WHAT WAS FOUND AND WHAT WAS DONE", scopeLabel(U), rp.length, 17);
+  var pr2 = ph2.rows.concat([[]], [["Repaired At","Board ID","Enclosure ID","Part Code","Model",
+      "Failed Stage","Fail Code","Failed At","Hours to Repair","Defect Found","Action Taken",
+      "Components Replaced","Outcome","Scrap Reason","Note","Operator","Repair No."].map(H)]);
+  rp.forEach(function(x){
+    var u = x[0], r = x[1], pc = variantOf(u);
+    var hrs = "";
+    if(r.failedAt){
+      var d = (new Date(r.at).getTime() - new Date(r.failedAt).getTime()) / 3600000;
+      if(isFinite(d)) hrs = Number(d.toFixed(2));
+    }
+    pr2.push([D(r.at), L(u.board), L(u.enclosure || ""), C(pc), C(modelOf(pc)),
+      C(r.failedStage || r.failedStation || ""), C(r.failCode || ""), D(r.failedAt || ""), C(hrs),
+      C(r.defect || ""), C(r.action || ""), C(r.parts || ""),
+      (r.outcome === "SCRAP" ? {v:"SCRAPPED", s:S_BAD} : {v:"REPAIRED", s:S_OK}),
+      C(r.scrapReason || ""), C(r.note || ""), C(r.operator || ""), C(r.attempt || "")]);
+  });
+  bandRows(pr2, 5);
+  var repairs = {rows:pr2, cols:[21,22,22,15,9,20,20,21,14,24,22,26,12,24,30,12,11],
+    merges:ph2.merges, freeze:"B6", heights:ph2.heights, tab:TAB_STAGE,
+    filter:"A5:Q" + Math.max(5, pr2.length)};
+
   return {allStages:allStages, mi:mi, pcba:pcba, hipot:hipot, ageing:ageing,
-          fin:fin, packing:packing, log:log};
+          fin:fin, packing:packing, log:log, rejections:rejections, repairs:repairs};
 }
 
 /* ---- the summary page, per variant ---- */
@@ -4101,6 +4783,72 @@ function summarySheet(units, part){
   var rGap4 = R(); heights[rGap4] = 30;
   rows.push([]);
 
+  /* ---- rejection analysis ----
+     Plain counts, not formulas: these are Pareto tallies over the failure and
+     repair logs, and there is nothing on the sheet for Excel to recompute
+     them from. The point is to make the biggest contributors obvious. */
+  var rejAll = [], repAll = [];
+  units.forEach(function(u){
+    (u.rejections || []).forEach(function(x){ rejAll.push(x); });
+    (u.repairs || []).forEach(function(x){ repAll.push(x); });
+  });
+  if(rejAll.length || repAll.length){
+    var tally = function(list, key){
+      var m = {}, out = [];
+      list.forEach(function(x){ var k = x[key] || "(not recorded)"; m[k] = (m[k] || 0) + 1; });
+      Object.keys(m).forEach(function(k){ out.push([k, m[k]]); });
+      out.sort(function(a, b){ return b[1] - a[1] || (a[0] < b[0] ? -1 : 1); });
+      return out;
+    };
+    var topN = function(list, keep){
+      if(list.length <= keep + 1) return list;
+      var head = list.slice(0, keep), rest = 0;
+      list.slice(keep).forEach(function(x){ rest += x[1]; });
+      return head.concat([["All other codes", rest]]);
+    };
+    var scrapped = repAll.filter(function(r){ return r.outcome === "SCRAP"; }).length;
+    var nff = repAll.filter(function(r){ return /NO FAULT FOUND/i.test(r.defect || ""); }).length;
+    var repeatUnits = n(function(u){ return (u.rejections || []).length > 1; });
+
+    var rRA = R(); heights[rRA] = 21.75;
+    merges.push("A" + rRA + ":F" + rRA);
+    rows.push(band("REJECTION ANALYSIS"));
+    var rRH = R(); heights[rRH] = 19.5;
+    rows.push([{v:"Item", s:S_HEADL}, H("Count"), H("Share"), {v:"", s:S_HEAD}, {v:"", s:S_HEAD},
+               {v:"Notes", s:S_HEADL}]);
+    var sub = function(t){
+      var r = R(); heights[r] = 19.5;
+      merges.push("A" + r + ":F" + r);
+      rows.push([{v:t, s:S_LABEL}, "", "", "", "", ""]);
+    };
+    var line = function(label, count, total, note){
+      var r = R(); heights[r] = 18;
+      merges.push("D" + r + ":E" + r);
+      rows.push([{v:label, s:S_L}, {v:count, s:S_INT},
+                 (total > 0 ? {v:count / total, s:S_PCT} : {v:"-", s:S_GREY}),
+                 {v:"", s:S_CELL}, "", {v:note || "", s:S_NOTE}]);
+    };
+    var first = R();
+    sub("Where the rejections happen");
+    tally(rejAll, "stage").forEach(function(x){ line(x[0], x[1], rejAll.length, ""); });
+    sub("Why they fail - test fail codes");
+    topN(tally(rejAll, "failCode"), 8).forEach(function(x){ line(x[0], x[1], rejAll.length, ""); });
+    if(repAll.length){
+      sub("What the repair bench actually found");
+      topN(tally(repAll, "defect"), 8).forEach(function(x){ line(x[0], x[1], repAll.length, ""); });
+      sub("Repair outcomes");
+      line("Repairs recorded", repAll.length, repAll.length, "");
+      line("Returned to PCBA testing", repAll.length - scrapped, repAll.length, "");
+      line("Scrapped", scrapped, repAll.length, "");
+      line("No fault found", nff, repAll.length, nff ? "re-check the test limits and the fixture" : "");
+    }
+    line("Drivers rejected more than once", repeatUnits, miQty,
+         repeatUnits ? "see the Rejections sheet for the repeat offenders" : "");
+    bandRows(rows, first);
+    var rGap5 = R(); heights[rGap5] = 30;
+    rows.push([]);
+  }
+
   var rS1 = R(); heights[rS1] = 21;
   rows.push([{v:"Prepared by", s:S_LABELC}, "", {v:"Checked by", s:S_LABELC}, "",
              {v:"Approved by", s:S_LABELC}]);
@@ -4150,6 +4898,8 @@ function exportAllReports(){
     ["4 Ageing",        r.ageing],
     ["5 Final Testing", r.fin],
     ["6 Packing",       r.packing],
+    ["Rejections",      r.rejections],
+    ["Repairs",         r.repairs],
     ["Event Log",       r.log]
   ]);
   saveWorkbook("all-reports", sheets);
@@ -4171,6 +4921,8 @@ function exportVariantReport(part){
     ["4 Ageing",        r.ageing],
     ["5 Final Testing", r.fin],
     ["6 Packing",       r.packing],
+    ["Rejections",      r.rejections],
+    ["Repairs",         r.repairs],
     ["Event Log",       r.log]
   ]);
   notify("ok","Variant report exported", prettyPart(part) + " · " + g.units.length + " units");
@@ -4329,14 +5081,16 @@ function render(){
     .sort(function(a,b){ return a.createdAt < b.createdAt ? 1 : -1; });
 
   var c = {
-    total: list.length,
-    paired: list.filter(function(u){ return u.enclosure; }).length,
+    total: list.filter(function(u){ return u.status !== "SCRAP"; }).length,
+    paired: list.filter(function(u){ return u.enclosure && u.status !== "SCRAP"; }).length,
     ageing: list.filter(function(u){ return u.ageingIn && !u.ageingOut; }).length,
     done: list.filter(function(u){ return u.stage4 && u.stage4.verdict === "PASS" && !u.packing; }).length,
     packed: list.filter(function(u){ return !!u.packing; }).length,
+    repaired: list.filter(function(u){ return u.status === "REPAIRED"; }).length,
+    scrap: list.filter(function(u){ return u.status === "SCRAP"; }).length,
     rework: list.filter(function(u){ return u.status === "REWORK"; }).length
   };
-  el("counts").innerHTML = [["On the floor",c.total],["Paired",c.paired],["In chamber",c.ageing],["Ready to pack",c.done],["Packed",c.packed],["Master boxes",db.boxes.length],["In rework",c.rework]]
+  el("counts").innerHTML = [["On the floor",c.total],["Paired",c.paired],["In chamber",c.ageing],["Ready to pack",c.done],["Packed",c.packed],["Master boxes",db.boxes.length],["Awaiting repair",c.rework],["Repaired, to re-test",c.repaired],["Scrapped",c.scrap]]
     .map(function(p){ return '<div><div class="n">' + p[1] + '</div><div class="k">' + p[0] + '</div></div>'; }).join("");
 
   el("bandNote").textContent = halfPair
@@ -4574,7 +5328,8 @@ function startLocalMode(reason){
 
 function buildStationCards(){
   el("stationList").innerHTML = STAGES.map(function(s){
-    var scanText = s.scan === "dual" ? "Scan board + enclosure"
+    var scanText = s.scan === "any"  ? "Scan board or enclosure"
+                 : s.scan === "dual" ? "Scan board + enclosure"
                  : s.scan === "board" ? "Scan board code" : "Scan enclosure code";
     var tag = ANALYSER_STATIONS.indexOf(s.key) >= 0 ? "instrument"
             : s.verdict ? "verdict" : "scan only";
@@ -4598,10 +5353,12 @@ function renderDashboard(){
   var list = Object.keys(db.units).map(function(k){ return db.units[k]; });
   var n = function(f){ var c = 0; list.forEach(function(u){ if(f(u)) c++; }); return c; };
   var tiles = [
-    ["On the floor",  list.length,                                                     "var(--info)"],
+    ["On the floor",  n(function(u){ return u.status !== "SCRAP"; }),                                                     "var(--info)"],
     ["In chamber",    n(function(u){ return u.ageingIn && !u.ageingOut; }),             "var(--wait)"],
     ["Passed final",  n(function(u){ return u.stage4 && u.stage4.verdict === "PASS"; }),"var(--ok)"],
-    ["In rework",     n(function(u){ return u.status === "REWORK"; }),                  "var(--bad)"],
+    ["Awaiting repair", n(function(u){ return u.status === "REWORK"; }),               "var(--bad)"],
+    ["Repaired",      n(function(u){ return u.status === "REPAIRED"; }),                "var(--wait)"],
+    ["Scrapped",      n(function(u){ return u.status === "SCRAP"; }),                   "var(--dim)"],
     ["Master boxes",  (db.boxes || []).length,                                          "var(--dim)"]
   ];
   el("dashStats").innerHTML = tiles.map(function(t){

@@ -261,6 +261,15 @@
     <div id="stationList" class="station-grid"></div>
 
     <h2 class="sec">Reports and setup</h2>
+    <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin:0 0 14px">
+      <span style="color:var(--dim);font-size:13px">Report period</span>
+      <input id="repFrom" class="small" type="date" style="width:168px" onchange="repRangeChanged()">
+      <span style="color:var(--faint);font-size:13px">to</span>
+      <input id="repTo" class="small" type="date" style="width:168px" onchange="repRangeChanged()">
+      <button class="ghost" onclick="repToday()">Today</button>
+      <button class="ghost" onclick="repAll()">All dates</button>
+      <span id="repCount" class="muted" style="font-size:13px"></span>
+    </div>
     <div class="dash-actions">
       <button class="act act-primary" onclick="exportSummary()">
         <span class="act-t">Summary</span><span class="act-s">Quantities per variant</span></button>
@@ -1137,7 +1146,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-1832";
+var BUILD_ID = "2026-10-13-1911";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -3353,6 +3362,71 @@ function variantOf(u){
   var c = classify(u.board);
   return (c && c.partCode) ? c.partCode : "UNKNOWN";
 }
+/* ---- the period a report covers ---------------------------------------
+   A day's production is what people usually want, so the exports default to
+   today rather than to everything ever scanned. "All dates" clears it. */
+function todayISO(){
+  var d = new Date(), p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+function repRange(){
+  var a = el("repFrom") ? el("repFrom").value : "";
+  var b = el("repTo")   ? el("repTo").value   : "";
+  if(!a && !b) return null;
+  var from = a ? new Date(a + "T00:00:00").getTime() : -Infinity;
+  var to   = b ? new Date(b + "T23:59:59.999").getTime() : Infinity;
+  if(from > to) return null;
+  return {from:from, to:to, a:a, b:b};
+}
+function unitInRange(u, r){
+  if(!r) return true;
+  var t = new Date(u.createdAt || (u.miLine && u.miLine.at) || 0).getTime();
+  return isFinite(t) && t >= r.from && t <= r.to;
+}
+/* Every export goes through these two, so the period applies wherever the
+   buttons are pressed from. */
+function reportUnits(){
+  var r = repRange();
+  return allUnits().filter(function(u){ return unitInRange(u, r); });
+}
+function reportGroups(){
+  var map = {}, order = [];
+  reportUnits().forEach(function(u){
+    var v = variantOf(u);
+    if(!map[v]){ map[v] = []; order.push(v); }
+    map[v].push(u);
+  });
+  order.sort();
+  return order.map(function(v){ return {variant:v, units:map[v]}; });
+}
+function repPeriodText(){
+  var r = repRange();
+  if(!r) return "All dates";
+  if(r.a && r.b && r.a === r.b) return r.a;
+  return (r.a || "start") + " to " + (r.b || "today");
+}
+function repRangeChanged(){
+  var box = el("repCount");
+  if(!box) return;
+  var r = repRange();
+  if(el("repFrom").value && el("repTo").value && !r){
+    box.textContent = "The From date is after the To date."; return;
+  }
+  var n = reportUnits().length;
+  box.textContent = n + " unit" + (n === 1 ? "" : "s") + " in this period"
+    + (r ? "" : " (everything on record)");
+}
+function repToday(){
+  if(!el("repFrom")) return;
+  el("repFrom").value = todayISO(); el("repTo").value = todayISO();
+  repRangeChanged();
+}
+function repAll(){
+  if(!el("repFrom")) return;
+  el("repFrom").value = ""; el("repTo").value = "";
+  repRangeChanged();
+}
+
 function variantGroups(){
   var map = {}, order = [];
   allUnits().forEach(function(u){
@@ -3494,7 +3568,7 @@ var S_DEF=0, S_COMPANY=1, S_TITLE=2, S_SCOMPANY=3, S_STITLE=4, S_META=5, S_RECOR
 /* Every second data row carries a light fill; this maps a style to its banded twin. */
 var BANDED = {13:34, 14:35, 15:36, 16:37, 17:38, 18:39, 19:40, 20:41, 21:42, 22:43, 23:44, 24:45, 25:46, 26:47, 27:48, 28:49, 29:50, 30:51, 31:52, 32:53};
 function bandStyle(s){ return BANDED[s] === undefined ? s : BANDED[s]; }
-var STYLES_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><numFmts count=\"3\"><numFmt numFmtId=\"164\" formatCode=\"0.0%\"/><numFmt numFmtId=\"165\" formatCode=\"0&quot; min&quot;\"/><numFmt numFmtId=\"166\" formatCode=\"dd\\-mmm\\-yyyy\\ hh:mm:ss\"/></numFmts><fonts count=\"21\"><font><sz val=\"11\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><b/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"18\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"13\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><color rgb=\"FF444444\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF9C0006\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF808080\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"17\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"12\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"14\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"13\"/><b/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"8\"/><color rgb=\"FF666666\"/><name val=\"Arial\"/><family val=\"2\"/></font></fonts><fills count=\"6\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF1F4E79\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF3A9A22\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEAF1F8\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFF2F2F2\"/><bgColor indexed=\"64\"/></patternFill></fill></fills><borders count=\"2\"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style=\"thin\"><color rgb=\"FFB7B7B7\"/></left><right style=\"thin\"><color rgb=\"FFB7B7B7\"/></right><top style=\"thin\"><color rgb=\"FFB7B7B7\"/></top><bottom style=\"thin\"><color rgb=\"FFB7B7B7\"/></bottom><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs><cellXfs count=\"54\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/><xf numFmtId=\"0\" fontId=\"5\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"6\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"13\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"14\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"7\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"15\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"right\"/></xf><xf numFmtId=\"0\" fontId=\"8\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"4\" fillId=\"2\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"20\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles></styleSheet>";
+var STYLES_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><numFmts count=\"3\"><numFmt numFmtId=\"164\" formatCode=\"0.0%\"/><numFmt numFmtId=\"165\" formatCode=\"0&quot; min&quot;\"/><numFmt numFmtId=\"166\" formatCode=\"dd\\-mmm\\-yyyy\\ hh:mm:ss\"/></numFmts><fonts count=\"21\"><font><sz val=\"11\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"10\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"10\"/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"18\"/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"13\"/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><color rgb=\"FF444444\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"11\"/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"9\"/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"9\"/><color rgb=\"FF9C0006\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF808080\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"17\"/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"12\"/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"9\"/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"14\"/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"11\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"11\"/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><b/><sz val=\"13\"/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"8\"/><color rgb=\"FF666666\"/><name val=\"Arial\"/><family val=\"2\"/></font></fonts><fills count=\"6\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF1F4E79\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF3A9A22\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEAF1F8\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFF2F2F2\"/><bgColor indexed=\"64\"/></patternFill></fill></fills><borders count=\"2\"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style=\"thin\"><color rgb=\"FFB7B7B7\"/></left><right style=\"thin\"><color rgb=\"FFB7B7B7\"/></right><top style=\"thin\"><color rgb=\"FFB7B7B7\"/></top><bottom style=\"thin\"><color rgb=\"FFB7B7B7\"/></bottom><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs><cellXfs count=\"54\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/><xf numFmtId=\"0\" fontId=\"5\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"6\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"13\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"14\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"7\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"15\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"right\"/></xf><xf numFmtId=\"0\" fontId=\"8\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"4\" fillId=\"2\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"20\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles></styleSheet>";
 
 /* A cell is a plain value, or {v:value, s:styleIndex}. A sheet is
    {rows:[], cols:[widths], merges:["A1:F1"], freeze:"A5"}. */
@@ -3691,7 +3765,8 @@ function headRows(title, scopeText, count, width){
   var metaLast = colRef(Math.max(1, width - 2));
   /* Column A is left clear on row 1 so the company name sits where it does on
      the approved report; the record count goes in the last column of row 3. */
-  var meta = [{v:scopeText + "   |   Generated: " + new Date().toLocaleString()
+  var meta = [{v:scopeText + "   |   Period: " + repPeriodText()
+      + "   |   Generated: " + new Date().toLocaleString()
       + "   |   Times in " + tzLabel(), s:S_META}];
   while(meta.length < Math.max(1, width - 1)) meta.push("");
   meta.push({v:"Records: " + count, s:S_RECORDS});
@@ -3885,7 +3960,8 @@ function summarySheet(units, part){
   var pctF = function(r){ return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")', s:S_PCT}; };
 
   rows.push(["", {v:COMPANY, s:S_COMPANY}]);
-  rows.push([{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT", s:S_TITLE}]);
+  rows.push([{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT   ·   "
+    + repPeriodText(), s:S_TITLE}]);
   merges.push("B1:F1", "A2:F2");
   rows.push([]);
   var heights = {1:69.75, 2:25.5, 3:7.5, 4:24, 5:24, 6:7.5, 7:21.75};
@@ -4001,8 +4077,9 @@ function summarySheet(units, part){
 }
 
 function exportSummary(){
-  var groups = variantGroups();
-  if(!groups.length) return notify("wait","Nothing to report","No records have been created yet.");
+  var groups = reportGroups();
+  if(!groups.length) return notify("wait","Nothing to report",
+    "No records fall in the selected period (" + repPeriodText() + ").");
   var one = groups.length === 1;
   saveWorkbook("summary", groups.map(function(g){
     return [one ? "Trial Summary" : "Trial Summary " + g.variant,
@@ -4013,9 +4090,10 @@ function exportSummary(){
 }
 
 function exportAllReports(){
-  var U = allUnits();
-  if(!U.length) return notify("wait","Nothing to report","No records have been created yet.");
-  var groups = variantGroups();
+  var U = reportUnits();
+  if(!U.length) return notify("wait","Nothing to report",
+    "No records fall in the selected period (" + repPeriodText() + ").");
+  var groups = reportGroups();
   var r = reportSheets(U);
   var one = groups.length === 1;
   var sheets = groups.map(function(g){
@@ -4038,7 +4116,7 @@ function exportAllReports(){
 
 /* One complete report for a single variant — the customer-facing version. */
 function exportVariantReport(part){
-  var g = variantGroups().filter(function(x){ return x.variant === part; })[0];
+  var g = reportGroups().filter(function(x){ return x.variant === part; })[0];
   if(!g) return notify("wait","Variant not found", part);
   var r = reportSheets(g.units);
   saveWorkbook("report-" + part, [
@@ -4198,6 +4276,12 @@ function delRun(){
 
 function render(){
   if(el("delPanel")) el("delPanel").classList.toggle("hide", !isAdminUser());
+  if(el("repFrom") && !el("repFrom").dataset.init){
+    el("repFrom").dataset.init = "1";
+    el("repFrom").value = todayISO(); el("repTo").value = todayISO();
+  }
+  if(el("repCount") && document.activeElement !== el("repFrom")
+     && document.activeElement !== el("repTo")) repRangeChanged();
   var list = Object.keys(db.units).map(function(k){ return db.units[k]; })
     .sort(function(a,b){ return a.createdAt < b.createdAt ? 1 : -1; });
 

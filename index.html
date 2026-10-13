@@ -1137,7 +1137,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-1638";
+var BUILD_ID = "2026-10-13-1708";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -2664,15 +2664,48 @@ function splitCode(code){
   return [code.slice(0, h), code.slice(h)];
 }
 
-function codeTextMM(c){
-  var pad = 0.8, gap = 0.3;
+/* The code block is printed exactly as wide as the QR above it, so the two
+   line up as one square on the label. The letters shrink to whatever that
+   width allows; if the label is too short for two lines at that size, the
+   height wins and the text comes out narrower than the QR. */
+function codeLongest(){
   var sample = BOARD_PREFIX + "-" + "ABCDEFGHI" + "-" + "000000";
   var parts = splitCode(sample);
-  var longest = Math.max(parts[0].length, parts[1].length);
-  var byWidth  = (c.w - pad * 2) / (longest * 0.62);     // Courier advance ~0.62em
+  return Math.max(parts[0].length, parts[1].length);
+}
+function codeTextMM(c){
+  var pad = 0.8, gap = 0.3;
+  var longest = codeLongest();
+  var byWidth  = c.qr / (longest * 0.6);                 // monospace advance 0.6em
   var byHeight = (c.h - pad * 2 - c.qr - gap) / 2.12;    // exactly two lines
   var mm = Math.min(byWidth, byHeight);
   return mm > 0 ? mm : 0;
+}
+
+/* Drawn as SVG with textLength rather than set as HTML text, because then the
+   width is exact on any printer instead of depending on the font's metrics.
+   Both lines share one scale, so the longer of the two spans the full width
+   and the shorter is centred under it. */
+function codeBlockSvg(code, widthMM){
+  var two = splitCode(code), W = 100;
+  var n = Math.max(two[0].length, two[1].length) || 1;
+  var fs = W / (n * 0.6);
+  var gap = fs * 0.12;
+  var H = fs * 2 + gap;
+  var esc = function(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;"); };
+  var line = function(t, y){
+    var len = (t.length / n) * W;
+    return '<text x="' + (W / 2).toFixed(2) + '" y="' + y.toFixed(2) + '" text-anchor="middle"'
+      + ' textLength="' + len.toFixed(2) + '" lengthAdjust="spacingAndGlyphs"'
+      + ' font-family="Courier New, monospace" font-weight="700" font-size="' + fs.toFixed(2) + '"'
+      + ' fill="#000">' + esc(t) + '</text>';
+  };
+  /* Height follows the width through the viewBox, so the block keeps its
+     shape whatever the label size. */
+  return '<svg class="lblcode" viewBox="0 0 ' + W + ' ' + H.toFixed(2) + '"'
+    + ' width="' + widthMM.toFixed(2) + 'mm" height="'
+    + (widthMM * H / W).toFixed(2) + 'mm" preserveAspectRatio="xMidYMid meet">'
+    + line(two[0], fs * 0.84) + line(two[1], fs * 1.84 + gap) + '</svg>';
 }
 
 function qrSizeChanged(){
@@ -2766,10 +2799,9 @@ function qrPrintSheet(firstPageOnly){
     +   "grid-auto-rows:" + c.h + "mm}"
     + "#printSheet .lbl{width:" + c.w + "mm;height:" + c.h + "mm;padding:"
     +   (stack ? "0.8mm" : "1.2mm") + "}"
-    + "#printSheet .lbl svg{width:" + qrPx + "mm;height:" + qrPx + "mm}"
+    + "#printSheet .lbl > svg{width:" + qrPx + "mm;height:" + qrPx + "mm}"
     + (stack
-        ? "#printSheet .lbl.stack .lblcode{font-size:" + tmm.toFixed(2) + "mm;"
-          + "margin-top:0.3mm;letter-spacing:-0.01em}"
+        ? "#printSheet .lbl.stack .lblcode{display:block;margin:0.3mm auto 0}"
         : "")
     + "}";
 
@@ -2782,11 +2814,8 @@ function qrPrintSheet(firstPageOnly){
       if(stack){
         // Just the QR and its code underneath, nothing else — the code wraps
         // to a second line and is sized to match the width of the QR.
-        var two = splitCode(x.code);
         return '<div class="lbl stack">' + svg
-          + '<div class="tx"><div class="lblcode">'
-          +   '<div>' + two[0] + '</div><div>' + two[1] + '</div>'
-          + '</div></div></div>';
+          + '<div class="tx">' + codeBlockSvg(x.code, qrPx) + '</div></div>';
       }
       return '<div class="lbl">' + svg
         + '<div class="tx">'
@@ -2835,7 +2864,8 @@ function zplFor(list, part){
     return list.map(function(x){
       var two = splitCode(ascii(x.code));
       var longest = Math.max(two[0].length, two[1].length);
-      var fw = Math.max(5, Math.min(18, Math.floor((pw - 8) / longest)));
+      // The code spans the width of the QR, as on the printed sheet.
+      var fw = Math.max(4, Math.min(18, Math.floor(qrW / longest)));
       var fh = Math.max(6, Math.min(24, Math.floor(fw * 1.45)));
       var lh = fh + 1;
       var cx = function(t){ return Math.max(0, Math.round((pw - t.length * fw) / 2)); };

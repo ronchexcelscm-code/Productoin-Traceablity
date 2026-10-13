@@ -1146,7 +1146,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-1922";
+var BUILD_ID = "2026-10-13-2023";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -3488,6 +3488,16 @@ function summaryRows(units, variant){
   return t;
 }
 
+/* Element text needs only these three escaped. Quotes must stay as quotes:
+   Excel re-parses the text of <f> as a formula and treats &quot; as a literal
+   six characters, which makes it reject the sheet and "repair" the file by
+   throwing the cells away. Attribute values still go through xmlEsc. */
+function xmlText(x){
+  return String(x === null || x === undefined ? "" : x)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
 function xmlEsc(x){
   return String(x === null || x === undefined ? "" : x)
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
@@ -3589,7 +3599,7 @@ function sheetXml(sheet){
            Excel reports the sheet as damaged. */
         var ft = (c && c.t) ? ' t="' + c.t + '"' : "";
         return '<c r="' + colRef(ci) + (ri+1) + '"' + (st ? ' s="' + st + '"' : "") + ft
-          + "><f>" + xmlEsc(String(fm).replace(/^=/, "")) + "</f></c>";
+          + "><f>" + xmlText(String(fm).replace(/^=/, "")) + "</f></c>";
       }
       if(v === null || v === undefined || v === "") {
         return st ? '<c r="' + colRef(ci) + (ri+1) + '" s="' + st + '"/>' : "";
@@ -3598,7 +3608,7 @@ function sheetXml(sheet){
       var sa = st ? ' s="' + st + '"' : "";
       if(/^-?\d+(\.\d+)?$/.test(val) && Math.abs(Number(val)) < 1e15)
         return '<c r="' + ref + '"' + sa + '><v>' + val + "</v></c>";
-      return '<c r="' + ref + '"' + sa + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + "</t></is></c>";
+      return '<c r="' + ref + '"' + sa + ' t="inlineStr"><is><t xml:space="preserve">' + xmlText(val) + "</t></is></c>";
     }).join("");
     var ht = (sheet && sheet.heights && sheet.heights[ri + 1]);
     var ha = ht ? ' ht="' + ht + '" customHeight="1"' : "";
@@ -3628,10 +3638,16 @@ function sheetXml(sheet){
     ? '<sheetPr><tabColor rgb="' + sheet.tab + '"/></sheetPr>' : "";
   /* The element order below is the one the file format requires; Excel
      repairs the file if these are swapped round. */
+  var wide = 1, deep = rows.length || 1;
+  rows.forEach(function(r){ if(r && r.length > wide) wide = r.length; });
+  var dim = '<dimension ref="A1:' + colRef(wide - 1) + deep + '"/>';
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-    + tab + pane + cols + "<sheetData>" + body + "</sheetData>"
-    + filter + merges + "</worksheet>";
+    + tab + dim + pane + '<sheetFormatPr defaultRowHeight="15"/>' + cols
+    + "<sheetData>" + body + "</sheetData>"
+    + filter + merges
+    + '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>'
+    + "</worksheet>";
 }
 
 function safeSheetName(name, used){

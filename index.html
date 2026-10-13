@@ -256,6 +256,15 @@
 
     <div class="stat-strip" id="dashStats"></div>
 
+    <div id="packBreak" class="hide" style="margin-top:16px;border:1px solid var(--line);
+         border-radius:8px;padding:14px 16px;background:var(--panel)">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+        <strong style="font-size:15px">Packed &mdash; by variety</strong>
+        <span id="packTotal" class="muted" style="font-size:13px"></span>
+      </div>
+      <div id="packTable" style="overflow:auto"></div>
+    </div>
+
     <h2 class="sec">Choose this terminal&rsquo;s station</h2>
     <p class="sec-sub">It stays locked to that station until you change it deliberately.</p>
     <div id="stationList" class="station-grid"></div>
@@ -1217,7 +1226,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-2320";
+var BUILD_ID = "2026-10-13-2350";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -2484,6 +2493,65 @@ function repScrapUnit(){
   repRecord("SCRAP");
 }
 
+
+/* ---------- packed stock, by variety ----------
+   Read from the master boxes rather than from db.units: a packed driver is
+   released from the terminal's memory once its record is safely in the cloud,
+   but its code stays in the box record, so the boxes are the only complete
+   source for what has actually been packed. */
+function packedByVariant(){
+  var map = {}, order = [], totalPcs = 0, boxes = (db.boxes || []);
+  boxes.forEach(function(b){
+    (b.drivers || []).forEach(function(code){
+      var part = classify(code).partCode || "UNKNOWN";
+      if(!map[part]){ map[part] = {part:part, pcs:0, boxes:{}}; order.push(part); }
+      map[part].pcs++;
+      map[part].boxes[b.id] = 1;
+      totalPcs++;
+    });
+  });
+  order.sort();
+  return {rows: order.map(function(p){
+            var r = map[p];
+            return {part:p, pcs:r.pcs, boxes:Object.keys(r.boxes).length};
+          }),
+          totalPcs: totalPcs, totalBoxes: boxes.length};
+}
+/* The three fields the packing list is read by: who it is for, how big it is,
+   and which revision. Letters come straight from the scanned code. */
+function partField(part, idx){
+  if(!part || part.length !== 9) return "";
+  var f = CODE_MASTER[idx], ch = part.charAt(idx);
+  return (f.map[ch] || "?") + "  (" + ch + ")";
+}
+function renderPacked(){
+  var box = el("packBreak"); if(!box) return;
+  var pk = packedByVariant();
+  if(!pk.rows.length){
+    box.classList.add("hide");
+    return;
+  }
+  box.classList.remove("hide");
+  el("packTotal").textContent = pk.totalPcs + " pc" + (pk.totalPcs === 1 ? "" : "s")
+    + " in " + pk.totalBoxes + " master box" + (pk.totalBoxes === 1 ? "" : "es")
+    + " · " + pk.rows.length + " variet" + (pk.rows.length === 1 ? "y" : "ies");
+  var h = '<table><thead><tr><th>Part code</th><th>Customer</th><th>Input power</th>'
+        + '<th>Version</th><th style="text-align:right">Qty (pcs)</th>'
+        + '<th style="text-align:right">Master boxes</th></tr></thead><tbody>';
+  pk.rows.forEach(function(r){
+    h += '<tr><td class="mono">' + repHEsc(prettyPart(r.part)) + '</td>'
+       + '<td>' + repHEsc(partField(r.part, 1)) + '</td>'
+       + '<td>' + repHEsc(partField(r.part, 4)) + '</td>'
+       + '<td>' + repHEsc(partField(r.part, 3)) + '</td>'
+       + '<td style="text-align:right">' + r.pcs + '</td>'
+       + '<td style="text-align:right">' + r.boxes + '</td></tr>';
+  });
+  h += '<tr><td colspan="4" style="text-align:right;color:var(--dim)">Total</td>'
+     + '<td style="text-align:right"><b>' + pk.totalPcs + '</b></td>'
+     + '<td style="text-align:right"><b>' + pk.totalBoxes + '</b></td></tr>';
+  h += "</tbody></table>";
+  el("packTable").innerHTML = h;
+}
 
 /* ---- table builders ---- */
 function stageTable(key){
@@ -5090,7 +5158,7 @@ function render(){
     scrap: list.filter(function(u){ return u.status === "SCRAP"; }).length,
     rework: list.filter(function(u){ return u.status === "REWORK"; }).length
   };
-  el("counts").innerHTML = [["On the floor",c.total],["Paired",c.paired],["In chamber",c.ageing],["Ready to pack",c.done],["Packed",c.packed],["Master boxes",db.boxes.length],["Awaiting repair",c.rework],["Repaired, to re-test",c.repaired],["Scrapped",c.scrap]]
+  el("counts").innerHTML = [["WIP Production",c.total],["Paired",c.paired],["In Ageing",c.ageing],["Pending for Packing",c.done],["Packed",c.packed],["Master Boxes",db.boxes.length],["WIP Rework Bench",c.rework],["Rework Completed",c.repaired],["Scrapped",c.scrap]]
     .map(function(p){ return '<div><div class="n">' + p[1] + '</div><div class="k">' + p[0] + '</div></div>'; }).join("");
 
   el("bandNote").textContent = halfPair
@@ -5352,19 +5420,21 @@ el("codeHint").textContent = "Board codes start with " + boardLabel()
 function renderDashboard(){
   var list = Object.keys(db.units).map(function(k){ return db.units[k]; });
   var n = function(f){ var c = 0; list.forEach(function(u){ if(f(u)) c++; }); return c; };
+  var pk = packedByVariant();
   var tiles = [
-    ["On the floor",  n(function(u){ return u.status !== "SCRAP"; }),                                                     "var(--info)"],
-    ["In chamber",    n(function(u){ return u.ageingIn && !u.ageingOut; }),             "var(--wait)"],
-    ["Passed final",  n(function(u){ return u.stage4 && u.stage4.verdict === "PASS"; }),"var(--ok)"],
-    ["Awaiting repair", n(function(u){ return u.status === "REWORK"; }),               "var(--bad)"],
-    ["Repaired",      n(function(u){ return u.status === "REPAIRED"; }),                "var(--wait)"],
-    ["Scrapped",      n(function(u){ return u.status === "SCRAP"; }),                   "var(--dim)"],
-    ["Master boxes",  (db.boxes || []).length,                                          "var(--dim)"]
+    ["WIP Production",      n(function(u){ return u.status !== "SCRAP"; }),                  "var(--info)"],
+    ["In Ageing",           n(function(u){ return u.ageingIn && !u.ageingOut; }),            "var(--wait)"],
+    ["Pending for Packing", n(function(u){ return u.stage4 && u.stage4.verdict === "PASS" && !u.packing; }), "var(--ok)"],
+    ["WIP Rework Bench",    n(function(u){ return u.status === "REWORK"; }),                 "var(--bad)"],
+    ["Rework Completed",    n(function(u){ return u.status === "REPAIRED"; }),               "var(--wait)"],
+    ["Scrapped",            n(function(u){ return u.status === "SCRAP"; }),                  "var(--dim)"],
+    ["Packed",              pk.totalPcs,                                                     "var(--dim)"]
   ];
   el("dashStats").innerHTML = tiles.map(function(t){
     return '<div class="stat" style="--accent:' + t[2] + '">'
       + '<div class="n">' + t[1] + '</div><div class="k">' + t[0] + '</div></div>';
   }).join("");
+  renderPacked();
   var v = Object.keys(db.limits || {}).length;
   el("pickCount").textContent = (list.length ? list.length + " unit" + (list.length === 1 ? "" : "s") + " on record"
                                              : "No records yet")

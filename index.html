@@ -1965,6 +1965,11 @@ async function connectAnalyser(){
   try{
     A.port = await navigator.serial.requestPort();
     await A.port.open({baudRate:anCfg().baud, dataBits:8, stopBits:1, parity:"none"});
+    /* Windows drivers raise DTR and RTS when a desktop program opens a port;
+       Web Serial does not, and an instrument that watches those lines to
+       decide whether a host is listening will stay silent without them. */
+    try{ await A.port.setSignals({dataTerminalReady:true, requestToSend:true}); }
+    catch(e){ /* not every port exposes the control lines */ }
     A.connected = true; A.error = ""; A.keepReading = true;
     A.raw = []; A.samples = []; A.lineCount = 0;
     readAnalyserLoop();
@@ -2071,13 +2076,16 @@ function feedAnalyser(chunk){
      #AA<+243.6>BB<0.0767>CC<+18.03>...LL<+18.17>$P
    Tags decoded by cross-referencing a live capture against the DTM-1 display.
    The character after "$" appears to carry the machine's own pass/fail verdict. */
+/* Twelve channels, in the order the DTM-1's own Display tab lays them out:
+   V  A  W  Pf / Hz  VA  Vthd  Athd / Vdc  Adc  Wdc  Eff.
+   The letters run AA..LL with none skipped. */
 var DTM1_TAGS = {
   AA:{code:"VAC",  unit:"V"},   BB:{code:"IAC",  unit:"A"},
   CC:{code:"PAC",  unit:"W"},   DD:{code:"PF",   unit:""},
-  EE:{code:"FREQ", unit:"Hz"},  FF:{code:"VDC",  unit:"V"},
-  GG:{code:"IDC",  unit:"A"},   HH:{code:"PDC",  unit:"W"},
-  II:{code:"EFF",  unit:"%"},   KK:{code:"VTHD", unit:"%"},
-  LL:{code:"ATHD", unit:"%"},
+  EE:{code:"FREQ", unit:"Hz"},  FF:{code:"VA",   unit:"VA"},
+  GG:{code:"VTHD", unit:"%"},   HH:{code:"ATHD", unit:"%"},
+  II:{code:"VDC",  unit:"V"},   JJ:{code:"IDC",  unit:"A"},
+  KK:{code:"PDC",  unit:"W"},   LL:{code:"EFF",  unit:"%"},
   // Constant in the sample capture — relabel once its meaning is confirmed.
   SS:{code:"SS",   unit:""}
 };
@@ -2088,18 +2096,19 @@ var DTM1_STATUS = {P:"PASS", F:"FAIL"};
    A blank bound is not checked. A parameter with no entry is not checked.
 -------------------------------------------------------------------- */
 var DTM_PARAMS = [
-  {code:"VAC",  label:"AC voltage",     unit:"V"},
-  {code:"IAC",  label:"AC current",     unit:"A"},
-  {code:"PAC",  label:"AC power",       unit:"W"},
-  {code:"PF",   label:"Power factor",   unit:""},
-  {code:"FREQ", label:"Frequency",      unit:"Hz"},
-  {code:"VDC",  label:"DC voltage",     unit:"V"},
-  {code:"IDC",  label:"DC current",     unit:"A"},
-  {code:"PDC",  label:"DC power",       unit:"W"},
-  {code:"EFF",  label:"Efficiency",     unit:"%"},
-  {code:"VTHD", label:"Voltage THD",    unit:"%"},
-  {code:"ATHD", label:"Current THD",    unit:"%"},
-  {code:"SS",   label:"SS (unlabelled)",unit:""}
+  {code:"VAC",  label:"AC voltage (V)",       unit:"V"},
+  {code:"IAC",  label:"AC current (A)",       unit:"A"},
+  {code:"PAC",  label:"AC power (W)",         unit:"W"},
+  {code:"PF",   label:"Power factor (Pf)",    unit:""},
+  {code:"FREQ", label:"Frequency (Hz)",       unit:"Hz"},
+  {code:"VA",   label:"Apparent power (VA)",  unit:"VA"},
+  {code:"VTHD", label:"Voltage THD (Vthd)",   unit:"%"},
+  {code:"ATHD", label:"Current THD (Athd)",   unit:"%"},
+  {code:"VDC",  label:"DC voltage (Vdc)",     unit:"V"},
+  {code:"IDC",  label:"DC current (Adc)",     unit:"A"},
+  {code:"PDC",  label:"DC power (Wdc)",       unit:"W"},
+  {code:"EFF",  label:"Efficiency (Eff)",     unit:"%"},
+  {code:"SS",   label:"SS (unlabelled)",      unit:""}
 ];
 /* The hi-pot tester reports only Pass/Fail, so there is nothing to grade
    against limits there — its own verdict is used directly. */
@@ -2344,6 +2353,11 @@ async function tryAutoReconnect(){
     if(!ports.length) return;
     A.port = ports[0];
     await A.port.open({baudRate:anCfg().baud, dataBits:8, stopBits:1, parity:"none"});
+    /* Windows drivers raise DTR and RTS when a desktop program opens a port;
+       Web Serial does not, and an instrument that watches those lines to
+       decide whether a host is listening will stay silent without them. */
+    try{ await A.port.setSignals({dataTerminalReady:true, requestToSend:true}); }
+    catch(e){ /* not every port exposes the control lines */ }
     A.connected = true; A.error = ""; A.keepReading = true;
     A.raw = []; A.samples = []; A.lineCount = 0;
     readAnalyserLoop();

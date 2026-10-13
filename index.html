@@ -2076,17 +2076,22 @@ function feedAnalyser(chunk){
      #AA<+243.6>BB<0.0767>CC<+18.03>...LL<+18.17>$P
    Tags decoded by cross-referencing a live capture against the DTM-1 display.
    The character after "$" appears to carry the machine's own pass/fail verdict. */
-/* Twelve channels, in the order the DTM-1's own Display tab lays them out:
-   V  A  W  Pf / Hz  VA  Vthd  Athd / Vdc  Adc  Wdc  Eff.
-   The letters run AA..LL with none skipped. */
+/* The tags the instrument actually sends, confirmed against a terminal
+   capture of the live frame:
+     #AA<+243.4>BB<0.0767>CC<+18.03>DD<0.9639>EE<+49.96>FF<+36.46>
+      GG<+0.4266>HH<+15.55>II<+86.22>SS<+109.1>KK<1.5967>LL<+18.17>$P
+   The arithmetic settles it: FF x GG = HH (36.46 x 0.4266 = 15.55), so those
+   are the DC volts, amps and watts; HH / CC = II (15.55 / 18.03 = 86.2%), so
+   II is efficiency. There is no JJ, and VA is not transmitted — the vendor's
+   own window computes it from V and A. */
 var DTM1_TAGS = {
   AA:{code:"VAC",  unit:"V"},   BB:{code:"IAC",  unit:"A"},
   CC:{code:"PAC",  unit:"W"},   DD:{code:"PF",   unit:""},
-  EE:{code:"FREQ", unit:"Hz"},  FF:{code:"VA",   unit:"VA"},
-  GG:{code:"VTHD", unit:"%"},   HH:{code:"ATHD", unit:"%"},
-  II:{code:"VDC",  unit:"V"},   JJ:{code:"IDC",  unit:"A"},
-  KK:{code:"PDC",  unit:"W"},   LL:{code:"EFF",  unit:"%"},
-  // Constant in the sample capture — relabel once its meaning is confirmed.
+  EE:{code:"FREQ", unit:"Hz"},  FF:{code:"VDC",  unit:"V"},
+  GG:{code:"IDC",  unit:"A"},   HH:{code:"PDC",  unit:"W"},
+  II:{code:"EFF",  unit:"%"},   KK:{code:"VTHD", unit:"%"},
+  LL:{code:"ATHD", unit:"%"},
+  // Constant at 109.1 through the whole capture — meaning not yet known.
   SS:{code:"SS",   unit:""}
 };
 var DTM1_STATUS = {P:"PASS", F:"FAIL"};
@@ -2096,19 +2101,18 @@ var DTM1_STATUS = {P:"PASS", F:"FAIL"};
    A blank bound is not checked. A parameter with no entry is not checked.
 -------------------------------------------------------------------- */
 var DTM_PARAMS = [
-  {code:"VAC",  label:"AC voltage (V)",       unit:"V"},
-  {code:"IAC",  label:"AC current (A)",       unit:"A"},
-  {code:"PAC",  label:"AC power (W)",         unit:"W"},
-  {code:"PF",   label:"Power factor (Pf)",    unit:""},
-  {code:"FREQ", label:"Frequency (Hz)",       unit:"Hz"},
-  {code:"VA",   label:"Apparent power (VA)",  unit:"VA"},
-  {code:"VTHD", label:"Voltage THD (Vthd)",   unit:"%"},
-  {code:"ATHD", label:"Current THD (Athd)",   unit:"%"},
-  {code:"VDC",  label:"DC voltage (Vdc)",     unit:"V"},
-  {code:"IDC",  label:"DC current (Adc)",     unit:"A"},
-  {code:"PDC",  label:"DC power (Wdc)",       unit:"W"},
-  {code:"EFF",  label:"Efficiency (Eff)",     unit:"%"},
-  {code:"SS",   label:"SS (unlabelled)",      unit:""}
+  {code:"VAC",  label:"AC voltage (V)",     unit:"V"},
+  {code:"IAC",  label:"AC current (A)",     unit:"A"},
+  {code:"PAC",  label:"AC power (W)",       unit:"W"},
+  {code:"PF",   label:"Power factor (Pf)",  unit:""},
+  {code:"FREQ", label:"Frequency (Hz)",     unit:"Hz"},
+  {code:"VDC",  label:"DC voltage (Vdc)",   unit:"V"},
+  {code:"IDC",  label:"DC current (Adc)",   unit:"A"},
+  {code:"PDC",  label:"DC power (Wdc)",     unit:"W"},
+  {code:"EFF",  label:"Efficiency (Eff)",   unit:"%"},
+  {code:"VTHD", label:"Voltage THD (Vthd)", unit:"%"},
+  {code:"ATHD", label:"Current THD (Athd)", unit:"%"},
+  {code:"SS",   label:"SS (unlabelled)",    unit:""}
 ];
 /* The hi-pot tester reports only Pass/Fail, so there is nothing to grade
    against limits there — its own verdict is used directly. */

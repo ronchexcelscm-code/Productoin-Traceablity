@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ronch Excel Industries Pvt. Ltd. — Traceability</title>
+<title>Ronch Trace — Ronch Excel Industries Pvt. Ltd.</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icons/icon-192.png">
 <meta name="theme-color" content="#10151A">
@@ -113,13 +113,20 @@
     box-shadow:0 10px 30px rgba(0,0,0,.45);line-height:0}
   .logo-chip img{display:block;width:76px;height:auto}
   .dash-title{flex:1;min-width:250px}
+  /* The product name sits above the company name, the way a model name sits
+     above a maker's name on a nameplate. The logo is untouched. */
+  .app-name{font-size:14px;font-weight:700;letter-spacing:3.4px;color:var(--ok);
+    margin:0 0 8px;text-transform:uppercase}
   .dash-title h1{font-size:31px;font-weight:700;margin:0 0 6px;letter-spacing:.6px;
     text-transform:uppercase}
   .dash-title p{margin:0 0 12px;font-size:15px;color:var(--dim)}
   .hdr-logo{height:26px;width:auto;background:#fff;border-radius:5px;padding:4px;flex:0 0 auto}
-  .hdr-name{font-size:13px;font-weight:700;letter-spacing:.9px;color:var(--dim);
+  .hdr-app{font-size:13px;font-weight:700;letter-spacing:1.6px;color:var(--ok);
     text-transform:uppercase;flex:0 0 auto}
-  @media (max-width:860px){ .hdr-name{display:none} }
+  .hdr-name{font-size:12px;font-weight:600;letter-spacing:.8px;color:var(--faint);
+    text-transform:uppercase;flex:0 0 auto}
+  @media (max-width:1040px){ .hdr-name{display:none} }
+  @media (max-width:640px){ .hdr-app{display:none} }
 
   /* Six tiles: one row on a bench screen, 3 + 3 on a laptop, 2 across on a
      tablet. Fixed counts rather than auto-fit, so the row never leaves a
@@ -228,8 +235,12 @@
   <div class="wrap" style="max-width:460px">
     <div style="text-align:center;margin-bottom:26px">
       <img src="icons/icon-192.png" alt="" style="width:58px;height:58px;background:#fff;border-radius:12px;padding:7px">
-      <h2 style="margin-top:16px">RONCH EXCEL INDUSTRIES PVT. LTD.</h2>
-      <p class="muted" style="font-size:14px;margin:6px 0 0">Traceability terminal</p>
+      <div style="margin-top:16px;font-size:22px;font-weight:700;letter-spacing:3px;
+                  color:var(--ok);text-transform:uppercase">Ronch Trace</div>
+      <h2 style="margin:8px 0 0;font-size:15px;font-weight:600;letter-spacing:.6px;
+                 color:var(--dim)">RONCH EXCEL INDUSTRIES PVT. LTD.</h2>
+      <p class="muted" style="font-size:13px;margin:8px 0 0">Every driver traced, every stage,
+        board to packed box</p>
     </div>
     <label style="color:var(--dim);font-size:13px;display:block;margin-bottom:6px">Department</label>
     <select id="loginUser" class="small" style="width:100%;font-size:16px;padding:11px 12px"
@@ -253,8 +264,9 @@
     <header class="dash-head">
       <div class="logo-chip"><img src="data:image/png;base64,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" alt="Ronch Excel"></div>
       <div class="dash-title">
+        <div class="app-name">Ronch Trace</div>
         <h1>RONCH EXCEL INDUSTRIES PVT. LTD.</h1>
-        <p>LED driver manufacturing &mdash; serial tracking from board to packed box</p>
+        <p>LED driver traceability &mdash; every driver, every stage, board to packed box</p>
       </div>
     </header>
 
@@ -471,7 +483,7 @@
 <!-- TERMINAL -->
 <div id="term" class="hide">
   <header>
-    <img class="hdr-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABfBAMAAADlmt9zAAAAJFBMVEX8/fw0lB0AUHyezJQcYolKoDVosFdTiaVDfJqwydaSs8XC37tcKDrZAAADYUlEQVR42s2XTUgVURTH/28+1DDEh2SUaENIBbZ4IbmohY9QoiA1ECVo8SAo3MUjaBGE+zbuooXkImghvCYLW+RCaCnSbMI+jAaiNvHwEeTX+2oxX+feuXc+AqG7eWdmzs9zzr3nnnMEBOsJAGSmChcF3zIjrnB2znv1fN7eBJDpBLSxeR7QGrYj1NwXjxcfQPG+1kpHeMT/lnd+7j2yDfq9VpqSAK5+SYHNvnrbnZMDxRIaoTCrP00ZUDQN0aZVb0uAZ6ZhQ0h0CYG2hxJ9oFEQAIcuQKYPvMyFgMqMXB3Adx4wNswo/cApzf2N/PMAsCw+OPmqFuIAU2xCCDQAYDIvNCECTk0DQPXF70nm9SvnPlwKhXtmOZCvr5IPJyyhhTtEH0vUL1vo0un79Km+RB5aRID+hn2u/yFh58KAMsNb3DdYnzjg5t1QTO/zjE8soM8Kdvl14JPJA1eESZGnp8+cg/5JmCT6YT/EMmvhmCTvfEllXVJWJXloEJQCuixxP/hSgQEuy4B9X6pQQJmT3g3fp3cUaJFfNyuImgDdcqAZCAQoJLjZNTMAlChgwhNmFXooCYLIaUzRbBmXueIlUCUAjm4Ai7FxrAYu5QDMxkat+oCRc6GY5QN2kl2lFoTlMcpC0qrM6Knx+k0f0P7Fwn8GNA/IQubgY9DyC6QZnEwAVOhEsp7AJa8YZZLGMGen3Catzy1jHw/q4NS055Aa2E67S14pT558OSNlLhnpDiID9yAkLVdgIeU2adhLonbeCbT2zdKAifh6p25uOsIWFCBonu3SMTfIH4X2811ZQe5kkm8vPP5y6xzp1wqACYMff7kIvJPSLKf+rjUBqGVAaf26LSLaPGHHsUCGklqXYFzyI7jmXqCdwCf6v4g3UfjjFRa8rNb6nNRQOwBscQF0gMxj7hWtUY0sCwT6KAd3mmm32VuBPJTl5y/norX2NnyXAOjlOgC0D/TQoW7YJDezaFIAwEgWWytsmv6iV7m1V2UBQTus0Lq0NxZXBLQKVyzadqMtDJtc5XsabUA3+VJ5Ixq4ClH9kruklNO1LL2csscdT9kUxy0JUO8X6y9I2+5af5x+qMoPfeFPuMdC1Ez1ozrNNLvRqsUX49AaGvBL4ehnK1y9BWtwsFlZGcnW163wt7+dk8UDykCJPwAAAABJRU5ErkJggg==" alt="Ronch Excel"><span class="hdr-name">RONCH EXCEL INDUSTRIES PVT. LTD.</span>
+    <img class="hdr-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABfBAMAAADlmt9zAAAAJFBMVEX8/fw0lB0AUHyezJQcYolKoDVosFdTiaVDfJqwydaSs8XC37tcKDrZAAADYUlEQVR42s2XTUgVURTH/28+1DDEh2SUaENIBbZ4IbmohY9QoiA1ECVo8SAo3MUjaBGE+zbuooXkImghvCYLW+RCaCnSbMI+jAaiNvHwEeTX+2oxX+feuXc+AqG7eWdmzs9zzr3nnnMEBOsJAGSmChcF3zIjrnB2znv1fN7eBJDpBLSxeR7QGrYj1NwXjxcfQPG+1kpHeMT/lnd+7j2yDfq9VpqSAK5+SYHNvnrbnZMDxRIaoTCrP00ZUDQN0aZVb0uAZ6ZhQ0h0CYG2hxJ9oFEQAIcuQKYPvMyFgMqMXB3Adx4wNswo/cApzf2N/PMAsCw+OPmqFuIAU2xCCDQAYDIvNCECTk0DQPXF70nm9SvnPlwKhXtmOZCvr5IPJyyhhTtEH0vUL1vo0un79Km+RB5aRID+hn2u/yFh58KAMsNb3DdYnzjg5t1QTO/zjE8soM8Kdvl14JPJA1eESZGnp8+cg/5JmCT6YT/EMmvhmCTvfEllXVJWJXloEJQCuixxP/hSgQEuy4B9X6pQQJmT3g3fp3cUaJFfNyuImgDdcqAZCAQoJLjZNTMAlChgwhNmFXooCYLIaUzRbBmXueIlUCUAjm4Ai7FxrAYu5QDMxkat+oCRc6GY5QN2kl2lFoTlMcpC0qrM6Knx+k0f0P7Fwn8GNA/IQubgY9DyC6QZnEwAVOhEsp7AJa8YZZLGMGen3Catzy1jHw/q4NS055Aa2E67S14pT558OSNlLhnpDiID9yAkLVdgIeU2adhLonbeCbT2zdKAifh6p25uOsIWFCBonu3SMTfIH4X2811ZQe5kkm8vPP5y6xzp1wqACYMff7kIvJPSLKf+rjUBqGVAaf26LSLaPGHHsUCGklqXYFzyI7jmXqCdwCf6v4g3UfjjFRa8rNb6nNRQOwBscQF0gMxj7hWtUY0sCwT6KAd3mmm32VuBPJTl5y/norX2NnyXAOjlOgC0D/TQoW7YJDezaFIAwEgWWytsmv6iV7m1V2UBQTus0Lq0NxZXBLQKVyzadqMtDJtc5XsabUA3+VJ5Ixq4ClH9kruklNO1LL2csscdT9kUxy0JUO8X6y9I2+5af5x+qMoPfeFPuMdC1Ez1ozrNNLvRqsUX49AaGvBL4ehnK1y9BWtwsFlZGcnW163wt7+dk8UDykCJPwAAAABJRU5ErkJggg==" alt="Ronch Excel"><span class="hdr-app">Ronch Trace</span>
     <div style="display:flex;align-items:baseline;gap:12px">
       <span class="mono" style="color:var(--info);font-size:13px" id="hStationId"></span>
       <span style="font-size:20px;font-weight:500" id="hStationName"></span>
@@ -1230,7 +1242,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-14-0005";
+var BUILD_ID = "2026-10-14-0120";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -4933,7 +4945,8 @@ function summarySheet(units, part){
   var rK = R(); heights[rK] = 24;
   merges.push("A" + rK + ":F" + rK);
   rows.push([{v:"Colour key: blue = recorded input, black = calculated. '-' = not applicable for "
-    + "that stage. Yield and summary figures recalculate from the stage table.", s:S_FOOT}]);
+    + "that stage. Yield and summary figures recalculate from the stage table."
+    + "        Generated by Ronch Trace.", s:S_FOOT}]);
 
   return {rows:rows, cols:[30,13,12,17,18,42], merges:merges,
           heights:heights, tab:TAB_SUMMARY};

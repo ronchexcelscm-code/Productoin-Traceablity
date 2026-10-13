@@ -1,7 +1,7 @@
 {
-  "name": "Ronch Excel Industries Pvt. Ltd. \u2014 Traceability",
-  "short_name": "Ronch Traceability",
-  "description": "LED driver serial traceability from MI Line to packed master box.",
+  "name": "Ronch Trace \u2014 Ronch Excel Industries Pvt. Ltd.",
+  "short_name": "Ronch Trace",
+  "description": "Ronch Trace \u2014 LED driver traceability: every driver, every stage, from MI Line to packed master box.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

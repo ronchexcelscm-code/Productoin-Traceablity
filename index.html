@@ -70,6 +70,23 @@
     border:1px solid var(--line);border-radius:5px;padding:8px 10px;margin-top:10px;
     max-height:92px;overflow:auto;white-space:pre-wrap;word-break:break-all}
   .an-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+  .upd-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9000;
+    display:flex;align-items:center;gap:13px;background:var(--panel2);color:var(--text);
+    border:1px solid var(--info);border-radius:9px;padding:12px 16px;font-size:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:92vw}
+  .upd-bar b{color:var(--info)}
+  .upd-bar button{font:inherit;cursor:pointer;border-radius:6px;padding:7px 14px;
+    border:1px solid var(--info);background:var(--info);color:#07121F;font-weight:600}
+  .upd-bar button.later{background:transparent;color:var(--dim);border-color:var(--line);font-weight:400}
+  .an-steps{margin-top:12px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .an-steps .r{display:flex;align-items:center;gap:10px;padding:7px 11px;font-size:13px;
+    border-top:1px solid var(--line)}
+  .an-steps .r:first-child{border-top:0}
+  .an-steps .n{font-family:var(--mono);color:var(--faint);min-width:46px}
+  .an-steps .nm{font-weight:600;min-width:92px}
+  .an-steps .d{color:var(--dim);flex:1;min-width:0;font-family:var(--mono);font-size:12px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .an-steps .v{font-weight:700;font-size:12px;padding:2px 9px;border-radius:4px}
   @keyframes blinkOk{
     0%,100%{background:var(--okd);box-shadow:0 0 0 0 rgba(49,196,111,0)}
     50%{background:#1B5233;box-shadow:0 0 0 7px rgba(49,196,111,.22)}
@@ -318,6 +335,10 @@
           <label style="color:var(--dim);font-size:13px">Page margin (mm)<br>
             <input id="qrMargin" class="small" type="number" min="0" max="30" step="1" value="8"
                    style="width:100px" onchange="qrSizeChanged()"></label>
+          <label style="color:var(--dim);font-size:13px">QR codes per page<br>
+            <input id="qrPerPage" class="small" type="number" min="0" max="999" step="1"
+                   placeholder="auto" title="Leave blank or 0 to fill the page"
+                   style="width:120px" onchange="qrSizeChanged()"></label>
         </div>
         <div id="qrPageCustom" class="hide" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px">
           <label style="color:var(--dim);font-size:13px">Paper W (mm)<br>
@@ -516,6 +537,7 @@
           <select id="anMode" class="small" style="width:150px" onchange="setAn('mode', this.value)">
             <option value="dtm1">DTM-1 (Embuilt) protocol</option>
             <option value="verdict">Pass/Fail only</option>
+            <option value="steps">Multi-step safety tester</option>
             <option value="auto">Labelled (V=230.1)</option>
             <option value="csv">CSV / positional</option>
           </select></label>
@@ -587,6 +609,25 @@
         <button class="ghost" onclick="backup()">Backup file</button>
         <button class="ghost" style="color:var(--bad);border-color:var(--bad)" onclick="clearAll()">Clear all records</button>
       </div>
+
+      <div id="delPanel" class="hide" style="border:1px solid var(--bad);border-radius:8px;
+           padding:14px 16px;margin-bottom:18px">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <strong style="color:var(--bad)">Delete data</strong>
+          <span style="color:var(--dim);font-size:13px">Removes every record created between two
+            dates. This applies to all terminals and cannot be undone.</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:12px">
+          <label style="color:var(--dim);font-size:13px">From<br>
+            <input id="delFrom" class="small" type="date" style="width:175px"></label>
+          <label style="color:var(--dim);font-size:13px">To<br>
+            <input id="delTo" class="small" type="date" style="width:175px"></label>
+          <button class="ghost" onclick="delCheck()">Check</button>
+          <button class="ghost" style="color:var(--bad);border-color:var(--bad)"
+                  onclick="delRun()">Delete these records</button>
+        </div>
+        <div id="delInfo" style="margin-top:11px;font-size:14px;font-family:var(--mono)"></div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:18px;
                   border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0">
         <span class="muted" style="font-size:13px;margin-right:6px">Reports</span>
@@ -654,7 +695,7 @@ var COL = function(n){ return PREFIX + n; };
 /* Shadow of what the cloud already holds, so each save writes only what
    actually changed rather than the whole database. */
 var SHADOW = {units:{}, enc:{}, boxes:{}, batches:{}, limits:{}, meta:""};
-var REMOVED = {enc:{}, limits:{}};
+var REMOVED = {enc:{}, limits:{}, units:{}, boxes:{}, batches:{}};
 var SYNC_TIMER = null;
 
 function cloudConfigured(){
@@ -705,6 +746,9 @@ function flushSync(){
       ops.push(["set", COL("enc"), k, {board:db.encIndex[k], open:true, _ts:Date.now()}, "enc", j]);
   });
   Object.keys(REMOVED.enc).forEach(function(k){ ops.push(["del", COL("enc"), k, null, "enc", null]); });
+  Object.keys(REMOVED.units).forEach(function(k){ ops.push(["del", COL("units"), k, null, "units", null]); });
+  Object.keys(REMOVED.boxes).forEach(function(k){ ops.push(["del", COL("boxes"), k, null, "boxes", null]); });
+  Object.keys(REMOVED.batches).forEach(function(k){ ops.push(["del", COL("batches"), k, null, "batches", null]); });
   (db.boxes || []).forEach(function(b){
     var j = stable(b);
     if(SHADOW.boxes[b.id] !== j) ops.push(["set", COL("boxes"), b.id, b, "boxes", j]);
@@ -781,6 +825,8 @@ function applyUnits(docs){
   docs.forEach(function(d){
     var u = d.data();
     delete u.open; delete u._ts; delete u.part;
+    // Deleted here a moment ago; the server copy is on its way out.
+    if(REMOVED.units[u.board]) return;
     var local = db.units[u.board];
     // A scan made here a moment ago may not have reached the server yet.
     // Never let an older server copy overwrite unsaved local work.
@@ -840,7 +886,8 @@ function startCloud(){
                        F.orderBy("createdAt", "desc"), F.limit(300)),
     function(snap){
       var freshB = (db.boxes || []).filter(function(b){ return SHADOW.boxes[b.id] === undefined; });
-      db.boxes = snap.docs.map(function(d){ return d.data(); }).reverse();
+      db.boxes = snap.docs.map(function(d){ return d.data(); })
+                     .filter(function(b){ return !REMOVED.boxes[b.id]; }).reverse();
       db.boxes.forEach(function(b){ SHADOW.boxes[b.id] = stable(b); });
       freshB.forEach(function(b){ if(!SHADOW.boxes[b.id]) db.boxes.push(b); });
       done("boxes");
@@ -850,7 +897,8 @@ function startCloud(){
                        F.orderBy("at", "desc"), F.limit(200)),
     function(snap){
       var fresh = db.batches.filter(function(b){ return SHADOW.batches[b.id] === undefined; });
-      db.batches = snap.docs.map(function(d){ return d.data(); });
+      db.batches = snap.docs.map(function(d){ return d.data(); })
+                      .filter(function(b){ return !REMOVED.batches[b.id]; });
       db.batches.forEach(function(b){ SHADOW.batches[b.id] = stable(b); });
       fresh.forEach(function(b){ if(!SHADOW.batches[b.id]) db.batches.unshift(b); });
       done("batches");
@@ -1086,6 +1134,49 @@ var scanBuffer = "", scanStartedAt = 0, scanLastAt = 0, scanMaxGap = 0;
 
 function now(){ return new Date().toISOString(); }
 function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "—"; }
+/* Stamped at build time. The station PCs keep this page open all day, so the
+   app asks the server now and then whether a newer build has been published
+   rather than relying on anyone remembering to reload after a deploy. */
+var BUILD_ID = "2026-10-13-1638";
+var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
+
+function checkForUpdate(){
+  if(UPDATE_SEEN) return;
+  if(!/^https?:$/.test(location.protocol)) return;   // opened as a file, nothing to check
+  if(Date.now() - UPDATE_CHECKED < 60000) return;
+  UPDATE_CHECKED = Date.now();
+  fetch("index.html", {cache:"no-store"})
+    .then(function(r){ return r.ok ? r.text() : null; })
+    .then(function(t){
+      if(!t) return;
+      var m = /BUILD_ID\s*=\s*"([^"]+)"/.exec(t);
+      if(m && m[1] && m[1] !== BUILD_ID){ UPDATE_SEEN = true; showUpdateBar(m[1]); }
+    })
+    .catch(function(){ /* offline; the bench keeps working */ });
+}
+
+function showUpdateBar(v){
+  if(document.getElementById("updBar")) return;
+  var d = document.createElement("div");
+  d.id = "updBar"; d.className = "upd-bar";
+  var span = document.createElement("span");
+  span.innerHTML = "<b>A newer version has been published.</b> Reload when the bench is clear.";
+  var go = document.createElement("button");
+  go.textContent = "Reload now";
+  go.onclick = function(){ location.reload(); };
+  var later = document.createElement("button");
+  later.className = "later"; later.textContent = "Later";
+  later.onclick = function(){ d.remove(); };
+  d.appendChild(span); d.appendChild(go); d.appendChild(later);
+  document.body.appendChild(d);
+}
+
+setTimeout(checkForUpdate, 20000);
+setInterval(checkForUpdate, 10 * 60 * 1000);
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden) checkForUpdate();
+});
+
 function el(id){ return document.getElementById(id); }
 function show(id){ el(id).classList.remove("hide"); }
 function hide(id){ el(id).classList.add("hide"); }
@@ -1220,6 +1311,7 @@ function reject(t,b){
   if(typeof A !== "undefined"){
     A.captured = null; A.capturing = false; clearTimeout(A.captureTimer);
     A.machineStatus = null; A.lastVerdictAt = 0;
+    A.steps = []; A.finalRaw = "";
   }
   render(); focusScan();
 }
@@ -1711,6 +1803,10 @@ function recordVerdict(verdict, failCode){
     entry.machineStatus= A.captured.machineStatus || null;
     entry.limitVerdict = A.captured.limitVerdict || null;
     entry.outOfLimits  = (A.captured.failing || []).join(" ");
+    if(A.captured.steps && A.captured.steps.length){
+      entry.steps       = A.captured.steps;
+      entry.failingStep = A.captured.failingStep || "";
+    }
   }
   if(station.key === "PCBA") u.stage1 = entry;
   if(station.key === "HIPOT") u.stage2 = entry;
@@ -1733,6 +1829,7 @@ function recordVerdict(verdict, failCode){
   // which made every unit after a failure look like a failure too.
   A.captured = null; A.capturing = false; clearTimeout(A.captureTimer);
   A.machineStatus = null; A.lastVerdictAt = 0; A.lastVerdictRaw = "";
+  A.steps = []; A.finalRaw = "";
   if(typeof renderAnalyser === "function") renderAnalyser();
   if(typeof paintSuggestion === "function") paintSuggestion();
   if(typeof renderAgeRow === "function") renderAgeRow();
@@ -1923,7 +2020,7 @@ var A = {
   port:null, reader:null, keepReading:false, connected:false,
   partial:"", raw:[], samples:[], live:null, lineCount:0, lastLineAt:0,
   capturing:false, captured:null, captureTimer:null, renderTimer:null, error:"", machineStatus:null,
-  lastVerdictAt:0, lastVerdictRaw:""
+  lastVerdictAt:0, lastVerdictRaw:"", steps:[], finalRaw:""
 };
 
 var STATION_AN_DEFAULTS = {
@@ -2028,6 +2125,32 @@ function feedAnalyser(chunk){
         A.lastVerdictAt = Date.now();
         A.lastVerdictRaw = line;
         if(A.capturing) finishVerdictCapture();
+      }
+    });
+    throttledAnalyserRender();
+    return;
+  }
+
+  if(anCfg().mode === "steps"){
+    var stlines = A.partial.split(/\r\n|\r|\n/);
+    A.partial = stlines.pop();
+    if(A.partial.length > 2000) A.partial = A.partial.slice(-200);
+    stlines.forEach(function(line){
+      line = line.trim();
+      if(!line) return;
+      A.lineCount++; A.lastLineAt = Date.now();
+      A.raw.unshift(line); if(A.raw.length > 8) A.raw.pop();
+      var st = parseStepLine(line);
+      if(st){
+        A.steps.push(st);
+        if(A.steps.length > 24) A.steps.shift();
+        return;
+      }
+      if(isFinalLine(line)){
+        A.finalRaw = line;
+        A.machineStatus = finalVerdictOf(line, A.steps);
+        A.lastVerdictAt = Date.now();
+        if(A.capturing) finishStepsCapture();
       }
     });
     throttledAnalyserRender();
@@ -2243,6 +2366,67 @@ function parseDtm1Frame(frame, statusChar){
   return out;
 }
 
+/* ---- multi-step safety testers (LS9955 and the like) -------------------
+   One message per step, then a summary:
+     STEP1:GR,RES=85.2mOhm,LIMIT=100mOhm,PASS
+     STEP3:INSUL,RES=45MOhm,LIMIT=100MOhm,FAIL
+     FINAL:FAIL,STEP3 FAILED
+   Taking the first PASS seen would pass a unit that fails at a later step,
+   so nothing is concluded until the summary arrives — or until a step fails,
+   which is conclusive on its own because the sequence stops there.
+   The patterns stay loose: step labels and units differ between models, and
+   the degree symbol and ohm sign often arrive mangled by the serial encoding. */
+function parseStepLine(line){
+  var m = /^\s*STEP\s*(\d+)\s*[:\-,]\s*(.+)$/i.exec(line);
+  if(!m) return null;
+  var rest = m[2].trim();
+  var result = /\bFAIL(ED)?\b/i.test(rest) ? "FAIL"
+             : /\bPASS(ED)?\b/i.test(rest) ? "PASS" : null;
+  var parts = rest.split(",");
+  var name = (parts[0] || "").trim();
+  if(/^(PASS|FAIL)/i.test(name)) name = "";
+  var detail = parts.slice(1).filter(function(p){
+    return !/^\s*(PASS|FAIL)(ED)?\s*$/i.test(p);
+  }).join(", ").trim();
+  return {n:m[1], name:name, result:result, detail:detail, raw:line};
+}
+function isFinalLine(line){ return /^\s*FINAL\b/i.test(line); }
+
+/* A summary that says PASS while a step failed is still a fail. */
+function finalVerdictOf(line, steps){
+  var anyFail = (steps || []).some(function(s){ return s.result === "FAIL"; });
+  if(anyFail || /\bFAIL(ED)?\b/i.test(line)) return "FAIL";
+  if(/\bPASS\b/i.test(line)) return "PASS";
+  return null;
+}
+function failingStepLabel(steps){
+  var bad = (steps || []).filter(function(s){ return s.result === "FAIL"; });
+  if(!bad.length) return "";
+  return bad.map(function(s){
+    return "STEP" + s.n + (s.name ? " " + s.name : "");
+  }).join(" / ");
+}
+function stepsRaw(steps, final){
+  var txt = (steps || []).map(function(s){ return s.raw; });
+  if(final) txt.push(final);
+  return txt.join(" | ");
+}
+
+function finishStepsCapture(){
+  clearTimeout(A.captureTimer);
+  A.capturing = false;
+  var steps = A.steps.slice();
+  A.captured = {
+    at: now(), samples: 1, measurements: [], steps: steps,
+    failingStep: failingStepLabel(steps),
+    raw: stepsRaw(steps, A.finalRaw),
+    machineStatus: A.machineStatus
+  };
+  if(pending) A.captured = applyLimits(A.captured, classify(pending.board).partCode, station.key);
+  renderAnalyser();
+  if(typeof paintSuggestion === "function") paintSuggestion();
+}
+
 function matchVerdictToken(line){
   var c = anCfg();
   try{
@@ -2302,6 +2486,32 @@ function startAnalyserCapture(){
   A.captured = null; A.capturing = true;
   var mark = Date.now();
   renderAnalyser();
+
+  if(anCfg().mode === "steps"){
+    // A sequence finished moments ago belongs to this unit; anything older is
+    // a previous unit's and is discarded so it cannot be inherited.
+    if(A.machineStatus && (Date.now() - A.lastVerdictAt) < 10000) return finishStepsCapture();
+    A.machineStatus = null; A.steps = []; A.finalRaw = "";
+    A.captureTimer = setTimeout(function(){
+      if(A.steps.some(function(s){ return s.result === "FAIL"; })){
+        // The instrument stops on a failing step, so the summary may never
+        // come. A failed step is conclusive by itself.
+        A.machineStatus = "FAIL"; A.lastVerdictAt = Date.now();
+        return finishStepsCapture();
+      }
+      A.capturing = false;
+      renderAnalyser();
+      if(A.steps.length)
+        notify("wait","Sequence did not finish",
+          A.steps.length + " step(s) received but no final result within "
+          + anCfg().settle + " s. Run the cycle again, or record the result by hand.");
+      else
+        notify("wait","No result from the tester",
+          "Nothing received within " + anCfg().settle
+          + " s. Run the hi-pot cycle, or record the result by hand.");
+    }, Math.max(5, anCfg().settle) * 1000);
+    return;
+  }
 
   if(anCfg().mode === "verdict"){
     // The tester reports once when its cycle ends. Accept a verdict that
@@ -2428,8 +2638,18 @@ function qrLayout(){
   var usableW = Math.max(0, pw - m * 2), usableH = Math.max(0, ph - m * 2);
   var cols = roll ? 1 : Math.max(0, Math.floor(usableW / c.w));
   var rows = roll ? 1 : Math.max(0, Math.floor(usableH / c.h));
-  return {cfg:c, pw:pw, ph:ph, margin:m, roll:roll,
-          cols:cols, rows:rows, perPage:Math.max(0, cols * rows)};
+  var fit = Math.max(0, cols * rows);
+  var perPage = fit, want = Math.max(0, Math.floor(+c.perPage || 0));
+  /* Pre-cut sheets do not always hold as many labels as the paper could, so a
+     count entered by hand wins over the calculated fit and the page simply
+     breaks after that many. */
+  if(!roll && want){
+    perPage = want;
+    if(!cols) cols = 1;
+    rows = Math.ceil(want / cols);
+  }
+  return {cfg:c, pw:pw, ph:ph, margin:m, roll:roll, fit:fit,
+          cols:cols, rows:rows, perPage:perPage, overflow:(!roll && want > fit && fit > 0)};
 }
 
 /* With the code printed under the QR, the text has to fit the width of the
@@ -2467,6 +2687,7 @@ function qrSizeChanged(){
   c.margin = Math.max(0,  Math.min(30,  parseFloat(el("qrMargin").value) || 0));
   c.pw     = Math.max(20, Math.min(900, parseFloat(el("qrPageW").value)  || 100));
   c.ph     = Math.max(20, Math.min(900, parseFloat(el("qrPageH").value)  || 150));
+  c.perPage = Math.max(0, Math.min(999, parseInt(el("qrPerPage").value, 10) || 0));
   save();
   renderQrSizes();
 }
@@ -2482,8 +2703,11 @@ function renderQrSizes(){
   if(document.activeElement !== el("qrMargin")) el("qrMargin").value = c.margin;
   if(document.activeElement !== el("qrPageW"))  el("qrPageW").value  = c.pw;
   if(document.activeElement !== el("qrPageH"))  el("qrPageH").value  = c.ph;
+  if(document.activeElement !== el("qrPerPage"))
+    el("qrPerPage").value = c.perPage ? c.perPage : "";
   el("qrPageCustom").classList.toggle("hide", c.page !== "custom");
   el("qrMargin").disabled = L.roll;
+  el("qrPerPage").disabled = L.roll;
 
   var box = el("qrFit"), msgs = [], bad = false;
   var stack = (c.layout || "stack") === "stack";
@@ -2499,6 +2723,8 @@ function renderQrSizes(){
     if(c.qr > c.w - 12){ msgs.push("No room for the text beside the QR — widen the label or shrink the QR."); bad = true; }
   }
   if(!L.perPage){ msgs.push("The label does not fit the paper at this size."); bad = true; }
+  if(L.overflow) msgs.push(L.perPage + " per page is more than the " + L.fit
+    + " that fit on this paper at this label size — the extra labels will run off the page.");
   if(c.qr < 10) msgs.push("Below about 10 mm a QR needs a high-resolution printer and a good scanner. Test one before a long run.");
 
   var n = LAST_BATCH ? batchCodes(LAST_BATCH.batch, LAST_BATCH.which).length : 0;
@@ -2507,8 +2733,9 @@ function renderQrSizes(){
     '<div style="font-family:var(--mono);font-size:14px;color:' + (bad ? "var(--bad)" : "var(--ok)") + '">'
     + (L.roll
         ? ("Label roll · one label per page · " + c.w + " x " + c.h + " mm")
-        : (L.cols + " across x " + L.rows + " down = " + L.perPage + " per page  ·  paper "
-           + L.pw + " x " + L.ph + " mm"))
+        : (L.cols + " across x " + L.rows + " down = " + L.perPage + " per page"
+           + (c.perPage ? " (set by hand; the paper fits " + L.fit + ")" : "")
+           + "  ·  paper " + L.pw + " x " + L.ph + " mm"))
     + (n ? ("  ·  " + n + " labels = " + pages + " page" + (pages === 1 ? "" : "s")) : "")
     + (stack ? ("  ·  code text " + codeTextMM(c).toFixed(2) + " mm on 2 lines") : "")
     + '</div>'
@@ -3002,10 +3229,36 @@ function renderAnalyser(){
     + (A.connected && pending ? '<button class="ghost" onclick="startAnalyserCapture()">Re-capture</button>' : '')
     + '</div>';
 
+  /* A multi-step tester is read step by step, so the operator can see which
+     one failed without going to the instrument's own screen. */
+  function stepsBlock(steps){
+    if(!steps || !steps.length) return "";
+    /* The tester's own text goes on screen, so it is escaped before it does. */
+    var esc = function(x){
+      return String(x === null || x === undefined ? "" : x)
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    };
+    return '<div class="an-steps">' + steps.map(function(s){
+      var col = s.result === "FAIL" ? "var(--bad)" : s.result === "PASS" ? "var(--ok)" : "var(--dim)";
+      var bg  = s.result === "FAIL" ? "var(--badd)" : s.result === "PASS" ? "var(--okd)" : "transparent";
+      return '<div class="r"><span class="n">STEP ' + esc(s.n) + '</span>'
+           + '<span class="nm">' + esc(s.name || "") + '</span>'
+           + '<span class="d">' + esc(s.detail || "") + '</span>'
+           + '<span class="v" style="background:' + bg + ';color:' + col + '">'
+           + esc(s.result || "—") + '</span></div>';
+    }).join("") + '</div>';
+  }
+
   var body = "";
   if(A.capturing){
-    body = '<div style="color:var(--wait);margin-top:12px;font-size:16px">Capturing — hold steady for '
-         + c.settle + ' s…</div>';
+    body = '<div style="color:var(--wait);margin-top:12px;font-size:16px">'
+         + (c.mode === "steps"
+             ? (A.steps.length
+                 ? ('Test running — ' + A.steps.length + ' step'
+                    + (A.steps.length === 1 ? "" : "s") + ' so far, waiting for the final result…')
+                 : 'Waiting for the tester — press START on the instrument…')
+             : ('Capturing — hold steady for ' + c.settle + ' s…'))
+         + '</div>' + (c.mode === "steps" ? stepsBlock(A.steps) : "");
   } else if(A.captured){
     var ms = A.captured.machineStatus;
     body = '<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">'
@@ -3016,6 +3269,7 @@ function renderAnalyser(){
                  + (ms === "PASS" ? "var(--ok)" : "var(--bad)") + '">Machine says ' + ms + '</span>' : '')
          + '</div>'
          + limitVerdictLine()
+         + stepsBlock(A.captured.steps)
          + '<div class="an-grid">' + A.captured.measurements.map(function(m){
              var col = m.ok === false ? "var(--bad)" : m.ok === true ? "var(--ok)" : "var(--text)";
              var range = (m.lo !== null && m.lo !== undefined) || (m.hi !== null && m.hi !== undefined)
@@ -3490,11 +3744,13 @@ function reportSheets(units){
     });
 
   var hipot = stageSheet("STAGE 3 - HI-POT AND GROUND TEST",
-    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code"],
-    [22,22,15,9,10,21,12,18], U.filter(function(u){ return u.stage2; }),
+    ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code",
+     "Failing Step","Instrument Steps"],
+    [22,22,15,9,10,21,12,18,18,60], U.filter(function(u){ return u.stage2; }),
     function(u){ return [C(u.board), C(u.enclosure || ""), C(variantOf(u)),
       C(modelOf(variantOf(u))), verdictCell(u.stage2.verdict), C(stampLocal(u.stage2.at)),
-      C(u.stage2.operator), C(u.stage2.failCode || "")]; });
+      C(u.stage2.operator), C(u.stage2.failCode || ""),
+      C(u.stage2.failingStep || ""), C(u.stage2.raw || "")]; });
 
   var ageing = stageSheet("STAGE 4 - AGEING",
     ["Board ID","Enclosure ID","Part Code","Model","Loaded At","Unloaded At","Ageing (min)",
@@ -3780,7 +4036,100 @@ function clearAll(){
 function setMinAge(v){ db.settings.minAgeingMinutes = Number(v); save(); }
 
 /* ---------- render ---------- */
+/* ---- deleting a date range (admin only) --------------------------------
+   Production records are the quality trail, so this is deliberately narrow:
+   an explicit range, a count shown before anything happens, and the word
+   DELETE typed out. The removals are queued for the cloud the same way edits
+   are, so every terminal loses them too rather than one PC drifting. */
+function isAdminUser(){
+  if(typeof CLOUD === "undefined" || !CLOUD.on) return true;   // single-PC build
+  return (CLOUD.user || "") === "admin";
+}
+function markRemoved(kind, id){
+  if(typeof REMOVED !== "undefined" && REMOVED[kind]) REMOVED[kind][id] = 1;
+  if(typeof SHADOW  !== "undefined" && SHADOW[kind])  delete SHADOW[kind][id];
+}
+function delRange(){
+  var a = el("delFrom").value, b = el("delTo").value;
+  if(!a || !b) return null;
+  var from = new Date(a + "T00:00:00").getTime();
+  var to   = new Date(b + "T23:59:59.999").getTime();
+  if(!isFinite(from) || !isFinite(to) || from > to) return null;
+  return {from:from, to:to};
+}
+function inDelRange(iso, r){
+  if(!iso) return false;
+  var t = new Date(iso).getTime();
+  return isFinite(t) && t >= r.from && t <= r.to;
+}
+function delScan(){
+  var r = delRange();
+  if(!r) return null;
+  var units = Object.keys(db.units).filter(function(k){
+    var u = db.units[k];
+    return inDelRange(u.createdAt || (u.miLine && u.miLine.at), r);
+  });
+  return {r:r, units:units,
+    boxes:   (db.boxes   || []).filter(function(b){ return inDelRange(b.createdAt, r); }),
+    batches: (db.batches || []).filter(function(b){ return inDelRange(b.at, r); })};
+}
+function delCheck(){
+  var box = el("delInfo");
+  var s = delScan();
+  if(!s){
+    box.innerHTML = '<span style="color:var(--wait)">Choose a From date and a To date, '
+      + 'with From on or before To.</span>';
+    return null;
+  }
+  box.innerHTML = '<span style="color:var(--text)">' + s.units.length + ' unit'
+    + (s.units.length === 1 ? "" : "s") + '  ·  ' + s.boxes.length + ' master box'
+    + (s.boxes.length === 1 ? "" : "es") + '  ·  ' + s.batches.length + ' QR batch'
+    + (s.batches.length === 1 ? "" : "es") + ' in that range.</span>';
+  return s;
+}
+function delRun(){
+  if(!isAdminUser())
+    return notify("wait","Not allowed","Only the admin login can delete records.");
+  var s = delCheck();
+  if(!s) return;
+  var total = s.units.length + s.boxes.length + s.batches.length;
+  if(!total) return notify("wait","Nothing to delete","No records fall in that range.");
+  var typed = prompt("This permanently deletes " + s.units.length + " unit(s), "
+    + s.boxes.length + " master box(es) and " + s.batches.length + " QR batch(es) created between "
+    + el("delFrom").value + " and " + el("delTo").value
+    + ".\n\nIt cannot be undone, and it removes them from every terminal."
+    + "\n\nType DELETE to confirm:");
+  if(String(typed || "").trim().toUpperCase() !== "DELETE")
+    return notify("wait","Cancelled","Nothing was deleted.");
+
+  s.units.forEach(function(k){
+    var u = db.units[k];
+    if(u && u.enclosure && db.encIndex){
+      delete db.encIndex[u.enclosure];
+      markRemoved("enc", u.enclosure);
+    }
+    delete db.units[k];
+    if(typeof LOADED_FOR_REPORT !== "undefined") delete LOADED_FOR_REPORT[k];
+    markRemoved("units", k);
+  });
+  var gone = {};
+  s.boxes.forEach(function(b){ gone[b.id] = 1; markRemoved("boxes", b.id); });
+  db.boxes = (db.boxes || []).filter(function(b){ return !gone[b.id]; });
+  var goneB = {};
+  s.batches.forEach(function(b){ goneB[b.id] = 1; markRemoved("batches", b.id); });
+  db.batches = (db.batches || []).filter(function(b){ return !goneB[b.id]; });
+
+  if(typeof pending !== "undefined") pending = null;
+  if(typeof halfPair !== "undefined") halfPair = null;
+  save();
+  el("delInfo").innerHTML = '<span style="color:var(--ok)">Deleted ' + s.units.length
+    + ' unit(s), ' + s.boxes.length + ' box(es) and ' + s.batches.length + ' batch(es).</span>';
+  notify("ok","Records deleted", total + " record" + (total === 1 ? "" : "s") + " removed.");
+  render();
+}
+
 function render(){
+  if(el("delPanel")) el("delPanel").classList.toggle("hide", !isAdminUser());
   var list = Object.keys(db.units).map(function(k){ return db.units[k]; })
     .sort(function(a,b){ return a.createdAt < b.createdAt ? 1 : -1; });
 

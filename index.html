@@ -1146,7 +1146,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-2023";
+var BUILD_ID = "2026-10-13-2115";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -1920,7 +1920,13 @@ function toCsv(table){
     return r.map(function(c){ return '"' + String(c === null || c === undefined ? "" : c).replace(/"/g,'""') + '"'; }).join(",");
   }).join("\n");
 }
-function stamp(){ return new Date().toISOString().slice(0,16).replace(/[:T]/g,"-"); }
+/* Local clock, not UTC: a file exported at 8:36 pm should say 20-36, not the
+   13-06 that toISOString gives in India. */
+function stamp(){
+  var d = new Date(), p = function(n){ return (n < 10 ? "0" : "") + n; };
+  return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate())
+    + "-" + p(d.getHours()) + "-" + p(d.getMinutes());
+}
 
 /* ---- table builders ---- */
 function stageTable(key){
@@ -3593,13 +3599,16 @@ function sheetXml(sheet){
       var v = c, st = 0, fm = null;
       if(c && typeof c === "object" && !(c instanceof Date)){ v = c.v; st = c.s || 0; fm = c.f || null; }
       if(fm){
-        /* A formula rather than a number, so the yields and totals recalculate
-           if anyone edits the stage table in Excel. A formula whose result is
-           text is marked t="str"; without it the cell is read as numeric and
-           Excel reports the sheet as damaged. */
-        var ft = (c && c.t) ? ' t="' + c.t + '"' : "";
+        /* A formula cell carries its answer as well as the formula. Excel will
+           recalculate on open, but a formula with no cached result is treated
+           as damaged, and anything else reading the file still sees a number
+           rather than a blank. */
+        var cv = (c && c.v !== undefined && c.v !== null && c.v !== "") ? c.v : null;
+        var isText = cv !== null && !/^-?\d+(\.\d+)?$/.test(String(cv));
+        var ft = isText ? ' t="str"' : "";
         return '<c r="' + colRef(ci) + (ri+1) + '"' + (st ? ' s="' + st + '"' : "") + ft
-          + "><f>" + xmlText(String(fm).replace(/^=/, "")) + "</f></c>";
+          + "><f>" + xmlText(String(fm).replace(/^=/, "")) + "</f>"
+          + (cv === null ? "" : "<v>" + xmlText(cv) + "</v>") + "</c>";
       }
       if(v === null || v === undefined || v === "") {
         return st ? '<c r="' + colRef(ci) + (ri+1) + '" s="' + st + '"/>' : "";
@@ -3669,6 +3678,7 @@ function saveWorkbook(fileLabel, sheets){
       + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
       + '<Default Extension="xml" ContentType="application/xml"/>'
       + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+      + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
       + named.map(function(_, i){
           return '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
         }).join("")
@@ -3978,7 +3988,11 @@ function summarySheet(units, part){
     while(r.length < 6) r.push({v:"", s:S_BAND});
     return r;
   };
-  var pctF = function(r){ return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")', s:S_PCT}; };
+  /* pass / total for the row, as both a formula and the number it produces. */
+  var pctF = function(r, pass, total){
+    return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")',
+            v: total > 0 ? (pass / total) : "-", s:S_PCT};
+  };
 
   rows.push(["", {v:COMPANY, s:S_COMPANY}]);
   rows.push([{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT   ·   "
@@ -4027,16 +4041,16 @@ function summarySheet(units, part){
   var rMI = R();
   rows.push([SN("1 - MI Line"), NUM(miQty), DASH(), DASH(), DASH(), NOTE("Boards scanned into the system")]);
   var rP = R();
-  rows.push([SN("2 - PCBA testing"), NUM(p1+f1), NUM(p1), NUM(f1), pctF(rP), NOTE("")]);
+  rows.push([SN("2 - PCBA testing"), NUM(p1+f1), NUM(p1), NUM(f1), pctF(rP, p1, p1+f1), NOTE("")]);
   var rH = R();
-  rows.push([SN("3 - Hi-pot and ground"), NUM(p2+f2), NUM(p2), NUM(f2), pctF(rH),
+  rows.push([SN("3 - Hi-pot and ground"), NUM(p2+f2), NUM(p2), NUM(f2), pctF(rH, p2, p2+f2),
              NOTE(n(function(u){ return u.enclosure; }) + " paired to an enclosure")]);
   var rAL = R();
   rows.push([SN("4a - Ageing load"), NUM(loaded), DASH(), DASH(), DASH(), NOTE(stillIn + " still in the chamber")]);
   var rAU = R();
-  rows.push([SN("4b - Ageing unload"), NUM(p3+f3), NUM(p3), NUM(f3), pctF(rAU), NOTE("")]);
+  rows.push([SN("4b - Ageing unload"), NUM(p3+f3), NUM(p3), NUM(f3), pctF(rAU, p3, p3+f3), NOTE("")]);
   var rF = R();
-  rows.push([SN("5 - Final testing"), NUM(p4+f4), NUM(p4), NUM(f4), pctF(rF), NOTE("")]);
+  rows.push([SN("5 - Final testing"), NUM(p4+f4), NUM(p4), NUM(f4), pctF(rF, p4, p4+f4), NOTE("")]);
   var rPk = R(); heights[rPk] = 19.5;
   rows.push([SN("6 - Packing"), NUM(packed), DASH(), DASH(), DASH(),
              NOTE(boxCount + " master boxes · " + ready + " ready to pack")]);
@@ -4049,12 +4063,14 @@ function summarySheet(units, part){
   heights[rOB] = 21.75;
   merges.push("A" + rOB + ":F" + rOB);
   var over = [
-    ["Units on record",                          {f:"=B" + rMI, s:S_INT}],
-    ["Completed and packed",                     {f:"=B" + rPk, s:S_INT}],
-    ["Passed final, not packed",                 {f:"=MAX(0,C" + rF + "-B" + rPk + ")", s:S_INT}],
+    ["Units on record",                          {f:"=B" + rMI, v:miQty, s:S_INT}],
+    ["Completed and packed",                     {f:"=B" + rPk, v:packed, s:S_INT}],
+    ["Passed final, not packed",                 {f:"=MAX(0,C" + rF + "-B" + rPk + ")",
+                                                  v:Math.max(0, p4 - packed), s:S_INT}],
     ["Currently in chamber",                     {v:stillIn, s:S_INT}],
     ["In rework",                                {v:rework, s:S_INT}],
-    ["Overall yield % (final pass / MI scanned)", {f:"=IF(B" + rMI + ">0,C" + rF + "/B" + rMI + ",0)", s:S_PCT11}],
+    ["Overall yield % (final pass / MI scanned)", {f:"=IF(B" + rMI + ">0,C" + rF + "/B" + rMI + ",0)",
+                                                  v: miQty > 0 ? (p4 / miQty) : 0, s:S_PCT11}],
     ["Master boxes completed",                   {v:boxCount, s:S_INT}]
   ];
   var ref = {};
@@ -4066,16 +4082,22 @@ function summarySheet(units, part){
     rows.push([{v:o[0], s:S_LABEL}, "", "", "", o[1]]);
   });
   /* "Units on record" at the top of the page reads off the MI Line row too. */
-  rows[rM2 - 1][4] = {f:"=B" + rMI, s:S_CELLB};
+  rows[rM2 - 1][4] = {f:"=B" + rMI, v:miQty, s:S_CELLB};
   var rGap3 = R(); heights[rGap3] = 7.5;
   rows.push([]);
 
   var rR = R(); heights[rR] = 30;
+  var allPacked = miQty > 0 && p4 === miQty && packed === miQty
+                  && stillIn === 0 && rework === 0;
+  var resultText = allPacked
+    ? ("TRIAL RESULT:  PASS  -  " + Math.round(p4 / miQty * 100) + "% yield, all "
+       + miQty + " units packed")
+    : "TRIAL RESULT:  REVIEW REQUIRED  -  check units in chamber / rework / not packed";
   merges.push("A" + rR + ":F" + rR);
   rows.push([{f:'=IF(AND(' + ref[5] + '=1,' + ref[2] + '=0,' + ref[3] + '=0,' + ref[4] + '=0),'
     + '"TRIAL RESULT:  PASS  -  "&TEXT(' + ref[5] + ',"0%")&" yield, all "&' + ref[0] + '&" units packed",'
     + '"TRIAL RESULT:  REVIEW REQUIRED  -  check units in chamber / rework / not packed")',
-    s:S_RESULT, t:"str"}]);
+    v: resultText, s:S_RESULT}]);
   var rGap4 = R(); heights[rGap4] = 30;
   rows.push([]);
 
@@ -4192,7 +4214,7 @@ function exportEverything(){
   notify("ok","Exported everything", units.length + " unit" + (units.length === 1 ? "" : "s") + " across all sections");
 }
 function backup(){
-  download("ronch-backup-" + new Date().toISOString().slice(0,10) + ".json", JSON.stringify(db, null, 2), "application/json");
+  download("ronch-backup-" + stamp().slice(0,10) + ".json", JSON.stringify(db, null, 2), "application/json");
 }
 function clearAll(){
   if(!confirm("Delete all records? This cannot be undone.")) return;

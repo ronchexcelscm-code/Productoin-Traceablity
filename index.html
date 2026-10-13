@@ -1137,7 +1137,7 @@ function hhmm(iso){ return iso ? new Date(iso).toLocaleTimeString([], {hour:"2-d
 /* Stamped at build time. The station PCs keep this page open all day, so the
    app asks the server now and then whether a newer build has been published
    rather than relying on anyone remembering to reload after a deploy. */
-var BUILD_ID = "2026-10-13-1708";
+var BUILD_ID = "2026-10-13-1832";
 var UPDATE_SEEN = false, UPDATE_CHECKED = 0;
 
 function checkForUpdate(){
@@ -3486,64 +3486,25 @@ function colRef(n){
   return s;
 }
 
-/* ---- styles: enough for a presentable report, written by hand ---- */
-var S_DEF=0, S_COMPANY=1, S_TITLE=2, S_META=3, S_BAND=4, S_HEAD=5,
-    S_CELL=6, S_CELLB=7, S_PCT=8, S_OK=9, S_BAD=10, S_LABEL=11,
-    S_MIN=12, S_INT=13, S_PCTB=14;
-
-var STYLES_XML = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
- + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
- + '<numFmts count="2"><numFmt numFmtId="164" formatCode="0.0%"/>'
- +   '<numFmt numFmtId="165" formatCode="0&quot; min&quot;"/></numFmts>'
- + '<fonts count="8">'
- +   '<font><sz val="11"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="11"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="14"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="12"/><color rgb="FF1F3864"/><name val="Calibri"/></font>'
- +   '<font><i/><sz val="9"/><color rgb="FF808080"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="11"/><color rgb="FF006100"/><name val="Calibri"/></font>'
- +   '<font><b/><sz val="11"/><color rgb="FF9C0006"/><name val="Calibri"/></font>'
- + '</fonts>'
- + '<fills count="6">'
- +   '<fill><patternFill patternType="none"/></fill>'
- +   '<fill><patternFill patternType="gray125"/></fill>'
- +   '<fill><patternFill patternType="solid"><fgColor rgb="FF1F3864"/><bgColor indexed="64"/></patternFill></fill>'
- +   '<fill><patternFill patternType="solid"><fgColor rgb="FFDDEBF7"/><bgColor indexed="64"/></patternFill></fill>'
- +   '<fill><patternFill patternType="solid"><fgColor rgb="FFC6EFCE"/><bgColor indexed="64"/></patternFill></fill>'
- +   '<fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/><bgColor indexed="64"/></patternFill></fill>'
- + '</fills>'
- + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
- +   '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right>'
- +   '<top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>'
- + '</borders>'
- + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
- + '<cellXfs count="15">'
- +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
- +   '<xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
- +   '<xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
- +   '<xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
- +   '<xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>'
- +   '<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
- +   '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>'
- +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1"/>'
- +   '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
- +   '<xf numFmtId="0" fontId="6" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
- +   '<xf numFmtId="0" fontId="7" fillId="5" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center"/></xf>'
- +   '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
- +   '<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>'
- +   '<xf numFmtId="1" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
- +   '<xf numFmtId="164" fontId="1" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1"/>'
- + '</cellXfs>'
- + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
- + '</styleSheet>';
+/* ---- styles: written by hand to match the approved report ----
+   Arial throughout, a navy/green/light-blue palette, thin grey rules and a
+   light fill on every second data row. The table below is generated so the
+   names and the cellXfs indices can never drift apart. */
+var S_DEF=0, S_COMPANY=1, S_TITLE=2, S_SCOMPANY=3, S_STITLE=4, S_META=5, S_RECORDS=6, S_BAND=7, S_SHEAD=8, S_HEAD=9, S_HEADL=10, S_LABEL=11, S_LABELC=12, S_BIGCODE=13, S_CELL=14, S_L=15, S_DT=16, S_OK=17, S_BAD=18, S_CELL10=19, S_CELL10L=20, S_CELLB=21, S_VARNAME=22, S_BLUEC=23, S_BLUEL=24, S_GREY=25, S_NOTE=26, S_PCT=27, S_MIN=28, S_INT=29, S_INTBLUE=30, S_PCT11=31, S_RESULT=32, S_FOOT=33, S_BIGCODE_B=34, S_CELL_B=35, S_L_B=36, S_DT_B=37, S_OK_B=38, S_BAD_B=39, S_CELL10_B=40, S_CELL10L_B=41, S_CELLB_B=42, S_VARNAME_B=43, S_BLUEC_B=44, S_BLUEL_B=45, S_GREY_B=46, S_NOTE_B=47, S_PCT_B=48, S_MIN_B=49, S_INT_B=50, S_INTBLUE_B=51, S_PCT11_B=52, S_RESULT_B=53;
+/* Every second data row carries a light fill; this maps a style to its banded twin. */
+var BANDED = {13:34, 14:35, 15:36, 16:37, 17:38, 18:39, 19:40, 20:41, 21:42, 22:43, 23:44, 24:45, 25:46, 26:47, 27:48, 28:49, 29:50, 30:51, 31:52, 32:53};
+function bandStyle(s){ return BANDED[s] === undefined ? s : BANDED[s]; }
+var STYLES_XML = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><numFmts count=\"3\"><numFmt numFmtId=\"164\" formatCode=\"0.0%\"/><numFmt numFmtId=\"165\" formatCode=\"0&quot; min&quot;\"/><numFmt numFmtId=\"166\" formatCode=\"dd\\-mmm\\-yyyy\\ hh:mm:ss\"/></numFmts><fonts count=\"21\"><font><sz val=\"11\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><b/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"18\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"13\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><color rgb=\"FF444444\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF9C0006\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"10\"/><color rgb=\"FF808080\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"17\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"12\"/><b/><color rgb=\"FFFFFFFF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"9\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"14\"/><b/><color rgb=\"FF1F4E79\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"11\"/><b/><color rgb=\"FF0000FF\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"13\"/><b/><color rgb=\"FF006100\"/><name val=\"Arial\"/><family val=\"2\"/></font><font><sz val=\"8\"/><color rgb=\"FF666666\"/><name val=\"Arial\"/><family val=\"2\"/></font></fonts><fills count=\"6\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF1F4E79\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF3A9A22\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFEAF1F8\"/><bgColor indexed=\"64\"/></patternFill></fill><fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFF2F2F2\"/><bgColor indexed=\"64\"/></patternFill></fill></fills><borders count=\"2\"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style=\"thin\"><color rgb=\"FFB7B7B7\"/></left><right style=\"thin\"><color rgb=\"FFB7B7B7\"/></right><top style=\"thin\"><color rgb=\"FFB7B7B7\"/></top><bottom style=\"thin\"><color rgb=\"FFB7B7B7\"/></bottom><diagonal/></border></borders><cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs><cellXfs count=\"54\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\"/><xf numFmtId=\"0\" fontId=\"5\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"6\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"13\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"14\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"7\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"15\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"right\"/></xf><xf numFmtId=\"0\" fontId=\"8\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"4\" fillId=\"2\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"4\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"0\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"20\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"0\" fontId=\"16\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"166\" fontId=\"3\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"9\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"10\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\"/></xf><xf numFmtId=\"0\" fontId=\"12\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"1\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"left\" wrapText=\"1\"/></xf><xf numFmtId=\"164\" fontId=\"2\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"165\" fontId=\"11\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"1\" fontId=\"18\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"164\" fontId=\"17\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\" applyNumberFormat=\"1\"><alignment horizontal=\"center\"/></xf><xf numFmtId=\"0\" fontId=\"19\" fillId=\"5\" borderId=\"1\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\" applyBorder=\"1\" applyAlignment=\"1\"><alignment horizontal=\"center\"/></xf></cellXfs><cellStyles count=\"1\"><cellStyle name=\"Normal\" xfId=\"0\" builtinId=\"0\"/></cellStyles></styleSheet>";
 
 /* A cell is a plain value, or {v:value, s:styleIndex}. A sheet is
    {rows:[], cols:[widths], merges:["A1:F1"], freeze:"A5"}. */
 function sheetXml(sheet){
   var rows = (sheet && sheet.rows) ? sheet.rows : sheet;
   var body = rows.map(function(r, ri){
-    if(!r || !r.length) return '<row r="' + (ri + 1) + '"/>';
+    var eh = (sheet && sheet.heights && sheet.heights[ri + 1]);
+    if(!r || !r.length)
+      return '<row r="' + (ri + 1) + '"'
+        + (eh ? ' ht="' + eh + '" customHeight="1"' : "") + "/>";
     var cells = r.map(function(c, ci){
       var v = c, st = 0, fm = null;
       if(c && typeof c === "object" && !(c instanceof Date)){ v = c.v; st = c.s || 0; fm = c.f || null; }
@@ -3562,7 +3523,9 @@ function sheetXml(sheet){
         return '<c r="' + ref + '"' + sa + '><v>' + val + "</v></c>";
       return '<c r="' + ref + '"' + sa + ' t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + "</t></is></c>";
     }).join("");
-    return '<row r="' + (ri + 1) + '">' + cells + "</row>";
+    var ht = (sheet && sheet.heights && sheet.heights[ri + 1]);
+    var ha = ht ? ' ht="' + ht + '" customHeight="1"' : "";
+    return '<row r="' + (ri + 1) + '"' + ha + ">" + cells + "</row>";
   }).join("");
 
   var cols = "";
@@ -3571,20 +3534,27 @@ function sheetXml(sheet){
       return '<col min="' + (i+1) + '" max="' + (i+1) + '" width="' + w + '" customWidth="1"/>';
     }).join("") + "</cols>";
   }
-  var pane = "";
-  if(sheet && sheet.freeze){
-    pane = '<sheetViews><sheetView workbookViewId="0"><pane ySplit="'
-      + (parseInt(String(sheet.freeze).replace(/[A-Z]/g,""),10) - 1)
-      + '" topLeftCell="' + sheet.freeze + '" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>';
-  }
+  /* Gridlines off on every sheet — the cells carry their own rules. */
+  var pane = '<sheetViews><sheetView showGridLines="0" workbookViewId="0">'
+    + (sheet && sheet.freeze
+        ? ('<pane ySplit="' + (parseInt(String(sheet.freeze).replace(/[A-Z]/g,""),10) - 1)
+           + '" topLeftCell="' + sheet.freeze + '" activePane="bottomLeft" state="frozen"/>')
+        : "")
+    + '</sheetView></sheetViews>';
   var merges = "";
   if(sheet && sheet.merges && sheet.merges.length){
     merges = '<mergeCells count="' + sheet.merges.length + '">'
       + sheet.merges.map(function(m){ return '<mergeCell ref="' + m + '"/>'; }).join("") + "</mergeCells>";
   }
+  var filter = (sheet && sheet.filter) ? '<autoFilter ref="' + sheet.filter + '"/>' : "";
+  var tab = (sheet && sheet.tab)
+    ? '<sheetPr><tabColor rgb="' + sheet.tab + '"/></sheetPr>' : "";
+  /* The element order below is the one the file format requires; Excel
+     repairs the file if these are swapped round. */
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-    + pane + cols + "<sheetData>" + body + "</sheetData>" + merges + "</worksheet>";
+    + tab + pane + cols + "<sheetData>" + body + "</sheetData>"
+    + filter + merges + "</worksheet>";
 }
 
 function safeSheetName(name, used){
@@ -3674,8 +3644,43 @@ function stampLocal(iso){
   return d.getFullYear() + "-" + p(d.getMonth()+1) + "-" + p(d.getDate())
     + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
 }
-function H(v){ return {v:v, s:S_HEAD}; }
+var TAB_SUMMARY = "FF3A9A22", TAB_STAGE = "FF1F4E79";
+
+function H(v){ return {v:v, s:S_SHEAD}; }
 function C(v){ return {v:v, s:S_CELL}; }
+function L(v){ return {v:v, s:S_L}; }
+
+/* Timestamps go in as real date values rather than text, so the columns sort
+   and filter properly in Excel. The serial is days since 1899-12-30, taken in
+   local time because that is the clock the floor works to. */
+function excelDate(iso){
+  if(!iso) return null;
+  var d = new Date(iso);
+  if(isNaN(d.getTime())) return null;
+  var ms = d.getTime() - d.getTimezoneOffset() * 60000;
+  return (ms / 86400000) + 25569;
+}
+function D(iso){
+  var n = excelDate(iso);
+  return n === null ? C("") : {v:n, s:S_DT};
+}
+
+/* Shades every second row of a table, from the first row of data onward. */
+function bandRows(rows, firstData){
+  for(var i = firstData; i < rows.length; i++){
+    if((i - firstData) % 2 === 0) continue;
+    var r = rows[i];
+    if(!r || !r.length) continue;
+    for(var j = 0; j < r.length; j++){
+      var c = r[j];
+      if(c && typeof c === "object" && !(c instanceof Date) && c.s !== undefined)
+        c.s = bandStyle(c.s);
+      else if(c === "" || c === null || c === undefined)
+        r[j] = {v:"", s:bandStyle(S_CELL)};
+    }
+  }
+  return rows;
+}
 function verdictCell(v){
   if(v === "PASS") return {v:"PASS", s:S_OK};
   if(v === "FAIL") return {v:"FAIL", s:S_BAD};
@@ -3689,13 +3694,14 @@ function headRows(title, scopeText, count, width){
   var meta = [{v:scopeText + "   |   Generated: " + new Date().toLocaleString()
       + "   |   Times in " + tzLabel(), s:S_META}];
   while(meta.length < Math.max(1, width - 1)) meta.push("");
-  meta.push({v:"Records: " + count, s:S_META});
+  meta.push({v:"Records: " + count, s:S_RECORDS});
   return {
     rows: [
-      ["", {v:COMPANY, s:S_COMPANY}],
-      [{v:title, s:S_TITLE}],
+      ["", {v:COMPANY, s:S_SCOMPANY}],
+      [{v:title, s:S_STITLE}],
       meta
     ],
+    heights: {1:57.75, 2:24, 3:19.5, 4:6, 5:31.5},
     merges: ["B1:" + last + "1", "A2:" + last + "2", "A3:" + metaLast + "3"]
   };
 }
@@ -3715,7 +3721,10 @@ function stageSheet(title, cols, widths, units, rowFn){
   var h = headRows(title, scopeLabel(units), units.length, cols.length);
   var rows = h.rows.concat([[]], [cols.map(H)]);
   units.forEach(function(u){ var r = rowFn(u); if(r) rows.push(r); });
-  return {rows:rows, cols:widths, merges:h.merges, freeze:"B6"};
+  bandRows(rows, 5);
+  return {rows:rows, cols:widths, merges:h.merges, freeze:"B6",
+          heights:h.heights, tab:TAB_STAGE,
+          filter:"A5:" + colRef(cols.length - 1) + Math.max(5, rows.length)};
 }
 
 function reportSheets(units){
@@ -3727,14 +3736,14 @@ function reportSheets(units){
      "Final Result","Final Tested","Master Box","Packed At","Fail Codes","Retests"],
     [22,22,15,9,11,21,12,15,21,15,21,21,21,15,21,24,21,15,9], U,
     function(u){
-      return [C(u.board), C(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
+      return [L(u.board), L(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
         C(u.status === "PASS" ? "PACKED" : u.status),
-        C(stampLocal(u.miLine && u.miLine.at)), C(u.miLine ? u.miLine.operator : ""),
-        verdictCell(u.stage1 && u.stage1.verdict), C(stampLocal(u.stage1 && u.stage1.at)),
-        verdictCell(u.stage2 && u.stage2.verdict), C(stampLocal(u.stage2 && u.stage2.at)),
-        C(stampLocal(u.ageingIn)), C(stampLocal(u.ageingOut)),
-        verdictCell(u.stage4 && u.stage4.verdict), C(stampLocal(u.stage4 && u.stage4.at)),
-        C(u.packing ? u.packing.boxId : ""), C(stampLocal(u.packing && u.packing.at)),
+        D(u.miLine && u.miLine.at), C(u.miLine ? u.miLine.operator : ""),
+        verdictCell(u.stage1 && u.stage1.verdict), D(u.stage1 && u.stage1.at),
+        verdictCell(u.stage2 && u.stage2.verdict), D(u.stage2 && u.stage2.at),
+        D(u.ageingIn), D(u.ageingOut),
+        verdictCell(u.stage4 && u.stage4.verdict), D(u.stage4 && u.stage4.at),
+        L(u.packing ? u.packing.boxId : ""), D(u.packing && u.packing.at),
         C([u.stage1 && u.stage1.failCode, u.stage2 && u.stage2.failCode,
            u.ageingResult && u.ageingResult.failCode, u.stage4 && u.stage4.failCode].filter(Boolean).join(" | ")),
         C(u.retests || 0)];
@@ -3743,8 +3752,8 @@ function reportSheets(units){
   var mi = stageSheet("STAGE 1 - MI LINE",
     ["Board ID","Part Code","Model","Completed At","Operator"],
     [22,15,9,21,12], U.filter(function(u){ return u.miLine; }),
-    function(u){ return [C(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
-      C(stampLocal(u.miLine.at)), C(u.miLine.operator)]; });
+    function(u){ return [L(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
+      D(u.miLine.at), C(u.miLine.operator)]; });
 
   var codes = [], mUnits = {};
   U.forEach(function(u){
@@ -3764,10 +3773,10 @@ function reportSheets(units){
     function(u){
       var by = {}; (u.stage1.measurements || []).forEach(function(m){ by[m.code] = m.value; });
       var lv = u.stage1.limitVerdict || "", mv = u.stage1.machineStatus || "", ref = lv || mv;
-      return [C(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
+      return [L(u.board), C(variantOf(u)), C(modelOf(variantOf(u))),
         verdictCell(u.stage1.verdict), C(lv), C(mv),
         C(ref ? (ref === u.stage1.verdict ? "yes" : "NO") : ""),
-        C(u.stage1.outOfLimits || ""), C(stampLocal(u.stage1.at)), C(u.stage1.operator),
+        C(u.stage1.outOfLimits || ""), D(u.stage1.at), C(u.stage1.operator),
         C(u.stage1.failCode || ""), C(u.retests || 0)]
         .concat(codes.map(function(c){ return C(by[c] === undefined ? "" : by[c]); }))
         .concat([C(u.stage1.samples || ""), C(u.stage1.raw || "")]);
@@ -3777,8 +3786,8 @@ function reportSheets(units){
     ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code",
      "Failing Step","Instrument Steps"],
     [22,22,15,9,10,21,12,18,18,60], U.filter(function(u){ return u.stage2; }),
-    function(u){ return [C(u.board), C(u.enclosure || ""), C(variantOf(u)),
-      C(modelOf(variantOf(u))), verdictCell(u.stage2.verdict), C(stampLocal(u.stage2.at)),
+    function(u){ return [L(u.board), L(u.enclosure || ""), C(variantOf(u)),
+      C(modelOf(variantOf(u))), verdictCell(u.stage2.verdict), D(u.stage2.at),
       C(u.stage2.operator), C(u.stage2.failCode || ""),
       C(u.stage2.failingStep || ""), C(u.stage2.raw || "")]; });
 
@@ -3790,8 +3799,8 @@ function reportSheets(units){
       var end = u.ageingOut ? new Date(u.ageingOut).getTime() : Date.now();
       var mins = Number(((end - new Date(u.ageingIn).getTime()) / 60000).toFixed(1));
       var need = ageingMinsForUnit(u);
-      return [C(u.board), C(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
-        C(stampLocal(u.ageingIn)), C(stampLocal(u.ageingOut)), C(mins), C(need),
+      return [L(u.board), L(u.enclosure || ""), C(variantOf(u)), C(modelOf(variantOf(u))),
+        D(u.ageingIn), D(u.ageingOut), C(mins), C(need),
         C(u.ageingOut ? "unloaded" : "in chamber"),
         (mins >= need ? {v:"YES", s:S_OK} : {v:"NO", s:S_BAD}),
         verdictCell(u.ageingResult && u.ageingResult.verdict),
@@ -3801,8 +3810,8 @@ function reportSheets(units){
   var fin = stageSheet("STAGE 5 - FINAL TESTING",
     ["Board ID","Enclosure ID","Part Code","Model","Verdict","Tested At","Operator","Fail Code","Status"],
     [22,22,15,9,10,21,12,18,12], U.filter(function(u){ return u.stage4; }),
-    function(u){ return [C(u.board), C(u.enclosure || ""), C(variantOf(u)),
-      C(modelOf(variantOf(u))), verdictCell(u.stage4.verdict), C(stampLocal(u.stage4.at)),
+    function(u){ return [L(u.board), L(u.enclosure || ""), C(variantOf(u)),
+      C(modelOf(variantOf(u))), verdictCell(u.stage4.verdict), D(u.stage4.at),
       C(u.stage4.operator), C(u.stage4.failCode || ""),
       C(u.status === "PASS" ? "PACKED" : u.status)]; });
 
@@ -3816,11 +3825,15 @@ function reportSheets(units){
   var prow = [["Master Box","Created At","Operator","Quantity","Part Code","Model","Enclosure IDs in Box"].map(H)];
   boxes.forEach(function(b){
     var part = (b.drivers && b.drivers.length) ? (classify(b.drivers[0]).partCode || "") : "";
-    prow.push([C(b.id), C(stampLocal(b.createdAt)), C(b.operator || ""), C(b.quantity || (b.drivers||[]).length),
+    prow.push([L(b.id), D(b.createdAt), C(b.operator || ""), C(b.quantity || (b.drivers||[]).length),
       C(part), C(modelOf(part))]
       .concat((b.drivers || []).map(function(d){ return C(d); })));
   });
-  var packing = {rows: ph.rows.concat([[]], prow), merges: ph.merges, freeze:"B6",
+  var prows = ph.rows.concat([[]], prow);
+  bandRows(prows, 5);
+  var packing = {rows: prows, merges: ph.merges, freeze:"B6",
+                 heights: ph.heights, tab: TAB_STAGE,
+                 filter: "A5:" + colRef(6 + maxQty - 1) + Math.max(5, prows.length),
                  cols:[24,21,12,10,15,9].concat(Array.apply(null, {length:maxQty}).map(function(){ return 22; }))};
 
   var ev = [];
@@ -3832,8 +3845,11 @@ function reportSheets(units){
   ev.sort(function(a, b){ return a[0] < b[0] ? -1 : 1; });
   var eh = headRows("EVENT LOG - FULL ACTIVITY HISTORY", scopeLabel(U), ev.length, 7);
   var erows = eh.rows.concat([[]], [["Timestamp","Station","Operator","Board ID","Enclosure ID","Event","Detail"].map(H)]);
-  ev.forEach(function(r){ erows.push([C(stampLocal(r[0])), C(r[1]), C(r[2]), C(r[3]), C(r[4]), C(r[5]), C(r[6])]); });
-  var log = {rows:erows, cols:[21,12,12,22,22,30,26], merges:eh.merges, freeze:"B6"};
+  ev.forEach(function(r){ erows.push([D(r[0]), C(r[1]), C(r[2]), L(r[3]), L(r[4]), L(r[5]), L(r[6])]); });
+  bandRows(erows, 5);
+  var log = {rows:erows, cols:[21,12,12,22,22,30,26], merges:eh.merges, freeze:"B6",
+             heights: eh.heights, tab: TAB_SUMMARY,
+             filter: "A5:G" + Math.max(5, erows.length)};
 
   return {allStages:allStages, mi:mi, pcba:pcba, hipot:hipot, ageing:ageing,
           fin:fin, packing:packing, log:log};
@@ -3866,16 +3882,17 @@ function summarySheet(units, part){
     while(r.length < 6) r.push({v:"", s:S_BAND});
     return r;
   };
-  var pctF = function(r){ return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")', s:S_PCTB}; };
+  var pctF = function(r){ return {f:"=IF(B" + r + ">0,C" + r + '/B' + r + ',"-")', s:S_PCT}; };
 
   rows.push(["", {v:COMPANY, s:S_COMPANY}]);
   rows.push([{v:"LED DRIVER - PRODUCTION TRIAL SUMMARY REPORT", s:S_TITLE}]);
   merges.push("B1:F1", "A2:F2");
   rows.push([]);
+  var heights = {1:69.75, 2:25.5, 3:7.5, 4:24, 5:24, 6:7.5, 7:21.75};
 
   var rM1 = R();
-  rows.push([{v:"Variant code", s:S_LABEL}, {v:part, s:S_CELLB}, "",
-             {v:"Generated", s:S_LABEL}, C(new Date().toLocaleString())]);
+  rows.push([{v:"Variant code", s:S_LABEL}, {v:part, s:S_BIGCODE}, "",
+             {v:"Generated", s:S_LABEL}, {v:new Date().toLocaleString(), s:S_CELL10}]);
   var rM2 = R();
   var mUnits = {v:"Units on record", s:S_LABEL};
   rows.push([{v:"Minimum ageing time", s:S_LABEL}, {v:ageingMinsFor(part), s:S_MIN}, "",
@@ -3885,38 +3902,54 @@ function summarySheet(units, part){
   rows.push([]);
 
   var rSB = R(); rows.push(band("VARIANT SPECIFICATION"));
-  var rSH = R(); rows.push([H("Parameter"), H("Code"), H("Description")]);
+  heights[rSB] = 21.75;
+  var rSH = R();
+  rows.push([{v:"Parameter", s:S_HEADL}, {v:"Code", s:S_HEAD}, {v:"Description", s:S_HEADL}]);
   merges.push("A" + rSB + ":F" + rSB, "C" + rSH + ":F" + rSH);
+  var rSpec0 = rows.length;
   describeVariant(part).forEach(function(r){
     merges.push("C" + R() + ":F" + R());
-    rows.push([{v:r[0], s:S_CELLB}, C(r[1]), C(r[2])]);
+    rows.push([{v:r[0], s:S_VARNAME}, {v:r[1], s:S_BLUEC}, {v:r[2], s:S_BLUEL}]);
   });
+  bandRows(rows, rSpec0);
+  var rGap1 = R(); heights[rGap1] = 7.5;
   rows.push([]);
 
   var rTB = R(); rows.push(band("STAGE-WISE TRIAL RESULTS"));
+  heights[rTB] = 21.75;
   merges.push("A" + rTB + ":F" + rTB);
-  rows.push(["Stage","Quantity","Pass","Fail","First Pass Yield %","Notes"].map(H));
+  heights[R()] = 30;
+  rows.push([{v:"Stage", s:S_HEADL}, H("Quantity"), H("Pass"), H("Fail"),
+             H("First Pass Yield %"), {v:"Notes", s:S_HEADL}]);
+  var rStage0 = rows.length;
 
-  var SN = function(t){ return {v:t, s:S_CELLB}; };
+  var SN = function(t){ return {v:t, s:S_VARNAME}; };
+  var NUM = function(v){ return {v:v, s:S_BLUEC}; };
+  var DASH = function(){ return {v:"-", s:S_GREY}; };
+  var NOTE = function(t){ return {v:t, s:S_NOTE}; };
   var rMI = R();
-  rows.push([SN("1 - MI Line"), C(miQty), C("-"), C("-"), C("-"), C("Boards scanned into the system")]);
+  rows.push([SN("1 - MI Line"), NUM(miQty), DASH(), DASH(), DASH(), NOTE("Boards scanned into the system")]);
   var rP = R();
-  rows.push([SN("2 - PCBA testing"), C(p1+f1), C(p1), C(f1), pctF(rP), C("")]);
+  rows.push([SN("2 - PCBA testing"), NUM(p1+f1), NUM(p1), NUM(f1), pctF(rP), NOTE("")]);
   var rH = R();
-  rows.push([SN("3 - Hi-pot and ground"), C(p2+f2), C(p2), C(f2), pctF(rH),
-             C(n(function(u){ return u.enclosure; }) + " paired to an enclosure")]);
+  rows.push([SN("3 - Hi-pot and ground"), NUM(p2+f2), NUM(p2), NUM(f2), pctF(rH),
+             NOTE(n(function(u){ return u.enclosure; }) + " paired to an enclosure")]);
   var rAL = R();
-  rows.push([SN("4a - Ageing load"), C(loaded), C("-"), C("-"), C("-"), C(stillIn + " still in the chamber")]);
+  rows.push([SN("4a - Ageing load"), NUM(loaded), DASH(), DASH(), DASH(), NOTE(stillIn + " still in the chamber")]);
   var rAU = R();
-  rows.push([SN("4b - Ageing unload"), C(p3+f3), C(p3), C(f3), pctF(rAU), C("")]);
+  rows.push([SN("4b - Ageing unload"), NUM(p3+f3), NUM(p3), NUM(f3), pctF(rAU), NOTE("")]);
   var rF = R();
-  rows.push([SN("5 - Final testing"), C(p4+f4), C(p4), C(f4), pctF(rF), C("")]);
-  var rPk = R();
-  rows.push([SN("6 - Packing"), C(packed), C("-"), C("-"), C("-"),
-             C(boxCount + " master boxes · " + ready + " ready to pack")]);
+  rows.push([SN("5 - Final testing"), NUM(p4+f4), NUM(p4), NUM(f4), pctF(rF), NOTE("")]);
+  var rPk = R(); heights[rPk] = 19.5;
+  rows.push([SN("6 - Packing"), NUM(packed), DASH(), DASH(), DASH(),
+             NOTE(boxCount + " master boxes · " + ready + " ready to pack")]);
+  bandRows(rows, rStage0);
+  [rMI, rP, rH, rAL, rAU, rF].forEach(function(r){ heights[r] = 19.5; });
+  var rGap2 = R(); heights[rGap2] = 7.5;
   rows.push([]);
 
   var rOB = R(); rows.push(band("OVERALL SUMMARY"));
+  heights[rOB] = 21.75;
   merges.push("A" + rOB + ":F" + rOB);
   var over = [
     ["Units on record",                          {f:"=B" + rMI, s:S_INT}],
@@ -3924,42 +3957,47 @@ function summarySheet(units, part){
     ["Passed final, not packed",                 {f:"=MAX(0,C" + rF + "-B" + rPk + ")", s:S_INT}],
     ["Currently in chamber",                     {v:stillIn, s:S_INT}],
     ["In rework",                                {v:rework, s:S_INT}],
-    ["Overall yield % (final pass / MI scanned)", {f:"=IF(B" + rMI + ">0,C" + rF + "/B" + rMI + ",0)", s:S_PCTB}],
+    ["Overall yield % (final pass / MI scanned)", {f:"=IF(B" + rMI + ">0,C" + rF + "/B" + rMI + ",0)", s:S_PCT11}],
     ["Master boxes completed",                   {v:boxCount, s:S_INT}]
   ];
   var ref = {};
   over.forEach(function(o, i){
     var r = R();
     ref[i] = "E" + r;
+    heights[r] = 21;
     merges.push("A" + r + ":D" + r, "E" + r + ":F" + r);
     rows.push([{v:o[0], s:S_LABEL}, "", "", "", o[1]]);
   });
   /* "Units on record" at the top of the page reads off the MI Line row too. */
-  rows[rM2 - 1][4] = {f:"=B" + rMI, s:S_INT};
+  rows[rM2 - 1][4] = {f:"=B" + rMI, s:S_CELLB};
+  var rGap3 = R(); heights[rGap3] = 7.5;
   rows.push([]);
 
-  var rR = R();
+  var rR = R(); heights[rR] = 30;
   merges.push("A" + rR + ":F" + rR);
   rows.push([{f:'=IF(AND(' + ref[5] + '=1,' + ref[2] + '=0,' + ref[3] + '=0,' + ref[4] + '=0),'
     + '"TRIAL RESULT:  PASS  -  "&TEXT(' + ref[5] + ',"0%")&" yield, all "&' + ref[0] + '&" units packed",'
     + '"TRIAL RESULT:  REVIEW REQUIRED  -  check units in chamber / rework / not packed")',
-    s:S_LABEL}]);
+    s:S_RESULT}]);
+  var rGap4 = R(); heights[rGap4] = 30;
   rows.push([]);
 
-  var rS1 = R();
-  rows.push([{v:"Prepared by", s:S_LABEL}, "", {v:"Checked by", s:S_LABEL}, "", {v:"Approved by", s:S_LABEL}]);
-  var rS2 = R();
-  rows.push([C(""), "", C(""), "", C("")]);
+  var rS1 = R(); heights[rS1] = 21;
+  rows.push([{v:"Prepared by", s:S_LABELC}, "", {v:"Checked by", s:S_LABELC}, "",
+             {v:"Approved by", s:S_LABELC}]);
+  var rS2 = R(); heights[rS2] = 37.5;
+  rows.push([{v:"", s:S_CELL10}, "", {v:"", s:S_CELL10}, "", {v:"", s:S_CELL10}]);
   [rS1, rS2].forEach(function(r){
     merges.push("A" + r + ":B" + r, "C" + r + ":D" + r, "E" + r + ":F" + r);
   });
   rows.push([]);
-  var rK = R();
+  var rK = R(); heights[rK] = 24;
   merges.push("A" + rK + ":F" + rK);
-  rows.push([C("Colour key: blue = recorded input, black = calculated. '-' = not applicable for "
-    + "that stage. Yield and summary figures recalculate from the stage table.")]);
+  rows.push([{v:"Colour key: blue = recorded input, black = calculated. '-' = not applicable for "
+    + "that stage. Yield and summary figures recalculate from the stage table.", s:S_FOOT}]);
 
-  return {rows:rows, cols:[30,13,12,17,18,42], merges:merges};
+  return {rows:rows, cols:[30,13,12,17,18,42], merges:merges,
+          heights:heights, tab:TAB_SUMMARY};
 }
 
 function exportSummary(){
